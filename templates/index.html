@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAFETY-EE SYSTEM — Plan B Media</title>
+<style>
+  :root {
+    --blue: #1F4E79; --green: #1a7a3b; --red: #c00000;
+    --orange: #e06c00; --purple: #7030A0; --yellow: #ffc000;
+    --pass: #c6efce; --fail: #ffc7ce; --crit: #ff4444; --stop: #ffeb9c;
+    --gray: #f5f7fa; --border: #d0d7de;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', 'TH Sarabun New', sans-serif;
+         background: var(--gray); color: #1a1a2e; font-size: 15px; }
+
+  /* Header */
+  .header { background: linear-gradient(135deg, var(--blue), #2e6db4);
+            color: #fff; padding: 16px 24px; display: flex;
+            align-items: center; gap: 16px; box-shadow: 0 2px 8px #0003; }
+  .header .logo { font-size: 28px; font-weight: 900; letter-spacing: 2px; }
+  .header .sub { font-size: 13px; opacity: .8; }
+  .badge { background: var(--yellow); color: var(--blue); font-weight: 800;
+           padding: 4px 12px; border-radius: 20px; font-size: 12px; margin-left: auto; }
+
+  /* Layout */
+  .container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media(max-width:700px){ .grid2 { grid-template-columns: 1fr; } }
+
+  /* Cards */
+  .card { background: #fff; border-radius: 12px; border: 1px solid var(--border);
+          box-shadow: 0 2px 8px #0001; overflow: hidden; }
+  .card-header { padding: 14px 20px; font-weight: 700; font-size: 15px;
+                 display: flex; align-items: center; gap: 8px; }
+  .card-body { padding: 20px; }
+  .step1 .card-header { background: #e8f5e9; color: var(--green); }
+  .step2 .card-header { background: #fff3e0; color: var(--orange); }
+  .step3 .card-header { background: #e3f2fd; color: var(--blue); }
+  .step4 .card-header { background: #f3e5f5; color: var(--purple); }
+  .step5 .card-header { background: #fce4ec; color: #c62828; }
+
+  /* Form */
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #444; }
+  input[type=text], input[type=number], select {
+    width: 100%; padding: 9px 12px; border: 1.5px solid var(--border);
+    border-radius: 8px; font-size: 14px; font-family: inherit;
+    transition: border .2s; background: #fafafa; }
+  input:focus, select:focus { outline: none; border-color: var(--blue);
+    background: #fff; box-shadow: 0 0 0 3px #1f4e7920; }
+  .form-row { margin-bottom: 14px; }
+
+  /* PPE / Equipment checkboxes */
+  .ppe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .ppe-item { display: flex; align-items: center; gap: 10px;
+              padding: 10px 14px; border: 2px solid var(--border);
+              border-radius: 10px; cursor: pointer; transition: all .2s;
+              background: #fafafa; }
+  .ppe-item:hover { border-color: var(--blue); background: #e8f0fe; }
+  .ppe-item input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--green); }
+  .ppe-item.checked { border-color: var(--green); background: var(--pass); }
+  .ppe-item .icon { font-size: 22px; }
+  .ppe-item .label { font-weight: 600; font-size: 13px; }
+
+  /* Value display */
+  .val-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .val-row input { flex: 1; }
+  .val-badge { padding: 6px 10px; border-radius: 6px; font-size: 12px;
+               font-weight: 700; white-space: nowrap; }
+  .val-ok { background: var(--pass); color: var(--green); }
+  .val-err { background: var(--fail); color: var(--red); }
+
+  /* Buttons */
+  .btn { padding: 12px 28px; border: none; border-radius: 10px; font-size: 15px;
+         font-weight: 700; cursor: pointer; transition: all .2s; font-family: inherit; }
+  .btn-primary { background: var(--blue); color: #fff; }
+  .btn-primary:hover { background: #163d61; transform: translateY(-1px); }
+  .btn-success { background: var(--green); color: #fff; }
+  .btn-success:hover { background: #145c2c; }
+  .btn-export { background: #217346; color: #fff; }
+  .btn-export:hover { background: #1a5c38; }
+  .btn-reset { background: #6c757d; color: #fff; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+
+  /* Result panel */
+  #result-panel { display: none; margin-top: 24px; }
+  .result-box { padding: 24px; border-radius: 14px; text-align: center;
+                border: 3px solid; animation: popIn .4s ease; }
+  @keyframes popIn { from{transform:scale(.9);opacity:0} to{transform:scale(1);opacity:1} }
+  .result-PASS { background: var(--pass); border-color: var(--green); color: var(--green); }
+  .result-FAIL { background: var(--fail); border-color: var(--red); color: var(--red); }
+  .result-CRITICAL { background: #ffdddd; border-color: var(--crit); color: var(--crit); }
+  .result-STOP { background: var(--stop); border-color: var(--orange); color: var(--orange); }
+  .result-title { font-size: 48px; font-weight: 900; letter-spacing: 4px; }
+  .result-sub { font-size: 16px; margin-top: 6px; }
+
+  /* Issues list */
+  .issues-list { margin-top: 14px; text-align: left; }
+  .issue-item { display: flex; align-items: flex-start; gap: 8px;
+                padding: 8px 12px; margin-bottom: 6px;
+                background: #fff5f5; border-left: 4px solid var(--red);
+                border-radius: 4px; font-size: 14px; }
+
+  /* Training triggers */
+  .training-section { margin-top: 20px; }
+  .training-title { font-size: 16px; font-weight: 700; color: var(--purple);
+                    margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .training-card { background: #f3e5f5; border: 1.5px solid #ce93d8;
+                   border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+  .training-card .tc-issue { font-weight: 700; color: var(--purple); margin-bottom: 6px; }
+  .training-card .tc-info { display: flex; gap: 10px; flex-wrap: wrap; }
+  .tc-tag { padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; }
+  .tc-new { background: #ff6b6b; color: #fff; }
+  .tc-reskill { background: #ffa726; color: #fff; }
+  .tc-upskill { background: #42a5f5; color: #fff; }
+  .tc-level-สูง { background: #ffcdd2; color: #b71c1c; }
+  .tc-level-ปานกลาง { background: #fff9c4; color: #f57f17; }
+  .tc-level-วิกฤต { background: #ff4444; color: #fff; }
+
+  /* Records table */
+  .records-section { margin-top: 30px; }
+  .records-title { font-size: 18px; font-weight: 700; margin-bottom: 14px;
+                   color: var(--blue); display: flex; align-items: center;
+                   justify-content: space-between; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: var(--blue); color: #fff; padding: 10px 12px;
+       text-align: center; white-space: nowrap; }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border);
+       text-align: center; }
+  tr:nth-child(even) td { background: #f0f4f8; }
+  .badge-PASS { background: var(--pass); color: var(--green);
+                padding: 3px 10px; border-radius: 12px; font-weight: 700; }
+  .badge-FAIL { background: var(--fail); color: var(--red);
+                padding: 3px 10px; border-radius: 12px; font-weight: 700; }
+  .badge-CRITICAL { background: var(--crit); color: #fff;
+                    padding: 3px 10px; border-radius: 12px; font-weight: 700; }
+  .badge-STOP { background: var(--stop); color: var(--orange);
+                padding: 3px 10px; border-radius: 12px; font-weight: 700; }
+
+  /* Summary bar */
+  .summary-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .sum-item { padding: 10px 20px; border-radius: 10px; font-weight: 700;
+              font-size: 14px; text-align: center; flex: 1; min-width: 100px; }
+  .sum-total { background: var(--blue); color: #fff; }
+  .sum-pass { background: var(--pass); color: var(--green); }
+  .sum-fail { background: var(--fail); color: var(--red); }
+  .sum-crit { background: var(--crit); color: #fff; }
+  .sum-stop { background: var(--stop); color: var(--orange); }
+
+  /* Hint text */
+  .hint { font-size: 11px; color: #888; margin-top: 3px; }
+
+  /* Location info */
+  .loc-info { background: #e8f0fe; border-radius: 8px; padding: 10px 14px;
+              font-size: 13px; margin-top: 8px; display: none; }
+  .loc-info.show { display: block; }
+
+  /* Step numbers */
+  .step-num { display: inline-flex; align-items: center; justify-content: center;
+              width: 26px; height: 26px; border-radius: 50%;
+              background: currentColor; color: #fff; font-size: 13px;
+              font-weight: 900; flex-shrink: 0; }
+  .step-num span { color: #fff; }
+
+  /* Footer */
+  footer { text-align: center; padding: 20px; font-size: 12px;
+           color: #888; margin-top: 30px; border-top: 1px solid var(--border); }
+
+  .loading { display: none; }
+  .loading.show { display: inline-block; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .spinner { display: inline-block; width: 18px; height: 18px;
+             border: 3px solid #fff3; border-top-color: #fff;
+             border-radius: 50%; animation: spin .6s linear infinite; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="logo">⚡ SAFETY-EE SYSTEM</div>
+    <div class="sub">ระบบตรวจสอบงานไฟฟ้าป้ายโฆษณา (Inspection + Training) — Plan B Media Standard</div>
+  </div>
+  <div class="badge">SAFETY FIRST</div>
+</div>
+
+<div class="container">
+
+  <form id="inspection-form">
+    <div class="grid2">
+
+      <!-- Step 1: Basic Info -->
+      <div class="card step1">
+        <div class="card-header">
+          <div class="step-num" style="color:var(--green)"><span>1</span></div>
+          รับข้อมูลจากช่าง
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            <label>รหัสป้าย (Code ID) *</label>
+            <select id="code_id" name="code_id" required onchange="checkLocation()">
+              <option value="">-- เลือก Code ID --</option>
+              {% for code, info in master_data.items() %}
+              <option value="{{ code }}">{{ code }} — {{ info.name }}</option>
+              {% endfor %}
+            </select>
+            <div class="loc-info" id="loc-info"></div>
+          </div>
+          <div class="form-row">
+            <label>Location / สถานที่</label>
+            <input type="text" id="location" placeholder="ระบุสถานที่ติดตั้ง">
+          </div>
+          <div class="form-row">
+            <label>ชื่อช่างผู้ตรวจ *</label>
+            <input type="text" id="technician" placeholder="ชื่อ-นามสกุล" required>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: PPE -->
+      <div class="card step2">
+        <div class="card-header">
+          <div class="step-num" style="color:var(--orange)"><span>2</span></div>
+          ตรวจ PPE
+          <span style="margin-left:auto;font-size:12px;font-weight:400;color:#666">ต้องครบ 4 รายการ</span>
+        </div>
+        <div class="card-body">
+          <div class="ppe-grid">
+            <label class="ppe-item" id="lbl-helmet">
+              <input type="checkbox" name="ppe" value="helmet" onchange="togglePPE(this)">
+              <span class="icon">⛑️</span>
+              <span class="label">หมวกนิรภัย</span>
+            </label>
+            <label class="ppe-item" id="lbl-gloves">
+              <input type="checkbox" name="ppe" value="gloves" onchange="togglePPE(this)">
+              <span class="icon">🧤</span>
+              <span class="label">ถุงมือ</span>
+            </label>
+            <label class="ppe-item" id="lbl-boots">
+              <input type="checkbox" name="ppe" value="boots" onchange="togglePPE(this)">
+              <span class="icon">👢</span>
+              <span class="label">รองเท้าเซฟตี้</span>
+            </label>
+            <label class="ppe-item" id="lbl-tools">
+              <input type="checkbox" name="ppe" value="tools" onchange="togglePPE(this)">
+              <span class="icon">🔧</span>
+              <span class="label">เครื่องมือครบ</span>
+            </label>
+          </div>
+          <div id="ppe-status" style="margin-top:10px;font-size:13px;color:#888;text-align:center">
+            กรุณาเลือก PPE
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Electrical Values -->
+      <div class="card step3">
+        <div class="card-header">
+          <div class="step-num" style="color:var(--blue)"><span>3</span></div>
+          ตรวจค่าทางไฟฟ้า
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            <label>Ground Resistance (Ω)</label>
+            <div class="val-row">
+              <input type="number" id="ground" placeholder="เช่น 3.21" step="0.01" min="0" oninput="checkVal('ground')">
+              <span class="val-badge" id="badge-ground" style="background:#eee;color:#999">— Ω</span>
+            </div>
+            <div class="hint">มาตรฐาน: ≤ 5Ω</div>
+          </div>
+          <div class="form-row">
+            <label>Continuity (Ω)</label>
+            <div class="val-row">
+              <input type="number" id="continuity" placeholder="เช่น 0.18" step="0.01" min="0" oninput="checkVal('continuity')">
+              <span class="val-badge" id="badge-continuity" style="background:#eee;color:#999">— Ω</span>
+            </div>
+            <div class="hint">มาตรฐาน: &lt; 0.5Ω</div>
+          </div>
+          <div class="form-row">
+            <label>Voltage (V)</label>
+            <div class="val-row">
+              <input type="number" id="voltage" placeholder="เช่น 220" step="1" oninput="checkVal('voltage')">
+              <span class="val-badge" id="badge-voltage" style="background:#eee;color:#999">— V</span>
+            </div>
+            <div class="hint">มาตรฐาน: 220V หรือ 380V</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Equipment -->
+      <div class="card step4">
+        <div class="card-header">
+          <div class="step-num" style="color:var(--purple)"><span>4</span></div>
+          ตรวจอุปกรณ์
+        </div>
+        <div class="card-body">
+          <div class="ppe-grid">
+            <label class="ppe-item" id="lbl-breaker">
+              <input type="checkbox" name="equipment" value="breaker" onchange="toggleEq(this)">
+              <span class="icon">⚡</span>
+              <span class="label">Breaker</span>
+            </label>
+            <label class="ppe-item" id="lbl-timer">
+              <input type="checkbox" name="equipment" value="timer" onchange="toggleEq(this)">
+              <span class="icon">⏱️</span>
+              <span class="label">Timer</span>
+            </label>
+            <label class="ppe-item" id="lbl-magnetic">
+              <input type="checkbox" name="equipment" value="magnetic" onchange="toggleEq(this)">
+              <span class="icon">🔌</span>
+              <span class="label">Magnetic</span>
+            </label>
+            <label class="ppe-item" id="lbl-wiring">
+              <input type="checkbox" name="equipment" value="wiring" onchange="toggleEq(this)">
+              <span class="icon">🔋</span>
+              <span class="label">Wiring เรียบร้อย</span>
+            </label>
+          </div>
+          <div id="eq-status" style="margin-top:10px;font-size:13px;color:#888;text-align:center">
+            กรุณาตรวจสอบอุปกรณ์
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end grid2 -->
+
+    <!-- Submit -->
+    <div class="btn-row">
+      <button type="submit" class="btn btn-primary" id="submit-btn">
+        <span id="submit-text">🔍 ตรวจสอบและสรุปผล</span>
+        <span class="loading spinner" id="submit-spinner"></span>
+      </button>
+      <button type="button" class="btn btn-reset" onclick="resetForm()">↺ เริ่มใหม่</button>
+    </div>
+  </form>
+
+  <!-- Result Panel -->
+  <div id="result-panel">
+    <div class="result-box" id="result-box">
+      <div class="result-title" id="result-title"></div>
+      <div class="result-sub" id="result-sub"></div>
+    </div>
+
+    <div id="issues-container" class="issues-list"></div>
+
+    <div id="training-container" class="training-section"></div>
+
+    <div class="btn-row">
+      <a href="/api/export_excel" class="btn btn-export" id="export-btn">
+        📊 Export Excel Report
+      </a>
+      <button class="btn btn-primary" onclick="resetForm()">+ ตรวจรายการถัดไป</button>
+    </div>
+  </div>
+
+  <!-- Records Table -->
+  <div class="records-section">
+    <div class="records-title">
+      <span>📋 ประวัติการตรวจ</span>
+      <a href="/api/export_excel" class="btn btn-export" style="font-size:13px;padding:8px 16px">
+        📊 Export Excel
+      </a>
+    </div>
+    <div class="summary-bar" id="summary-bar">
+      <div class="sum-item sum-total">รวม: 0</div>
+      <div class="sum-item sum-pass">✅ PASS: 0</div>
+      <div class="sum-item sum-fail">❌ FAIL: 0</div>
+      <div class="sum-item sum-crit">🚨 CRITICAL: 0</div>
+      <div class="sum-item sum-stop">🛑 STOP: 0</div>
+    </div>
+    <div class="table-wrap">
+      <table id="records-table">
+        <thead>
+          <tr>
+            <th>#</th><th>วันที่</th><th>Code ID</th><th>Location</th>
+            <th>ช่าง</th><th>PPE</th><th>Ground</th><th>Continuity</th>
+            <th>Voltage</th><th>อุปกรณ์</th><th>ปัญหา</th><th>ผล</th>
+          </tr>
+        </thead>
+        <tbody id="records-body">
+          <tr><td colspan="12" style="color:#aaa;padding:20px">ยังไม่มีข้อมูล</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- container -->
+
+<footer>
+  SAFETY-EE SYSTEM | Plan B Media Engineering Excellence |
+  มาตรฐาน วสท. (วิศวกรรมสถานแห่งประเทศไทย ในพระบรมราชูปถัมภ์)
+</footer>
+
+<script>
+const masterData = {{ master_data | tojson }};
+let allRecords = [];
+
+// Location check
+function checkLocation() {
+  const code = document.getElementById('code_id').value;
+  const info = masterData[code];
+  const div = document.getElementById('loc-info');
+  if (info) {
+    div.innerHTML = `📍 <strong>${info.name}</strong> | พื้นที่: ${info.area} | ประเภท: ${info.type}`;
+    div.classList.add('show');
+    document.getElementById('location').value = info.name;
+  } else {
+    div.classList.remove('show');
+  }
+}
+
+// PPE toggle
+function togglePPE(cb) {
+  const lbl = cb.closest('label');
+  lbl.classList.toggle('checked', cb.checked);
+  const checked = document.querySelectorAll('input[name=ppe]:checked').length;
+  const st = document.getElementById('ppe-status');
+  if (checked === 4) {
+    st.innerHTML = '<span style="color:var(--green);font-weight:700">✅ PPE ครบ — พร้อมทำงาน</span>';
+  } else {
+    st.innerHTML = `<span style="color:var(--orange)">⚠️ PPE ${checked}/4 — ยังไม่ครบ</span>`;
+  }
+}
+
+// Equipment toggle
+function toggleEq(cb) {
+  const lbl = cb.closest('label');
+  lbl.classList.toggle('checked', cb.checked);
+  const checked = document.querySelectorAll('input[name=equipment]:checked').length;
+  const st = document.getElementById('eq-status');
+  if (checked === 4) {
+    st.innerHTML = '<span style="color:var(--green);font-weight:700">✅ อุปกรณ์ครบ — ผ่าน</span>';
+  } else {
+    st.innerHTML = `<span style="color:var(--orange)">⚠️ ตรวจแล้ว ${checked}/4</span>`;
+  }
+}
+
+// Live validation badges
+function checkVal(field) {
+  const val = parseFloat(document.getElementById(field).value);
+  const badge = document.getElementById('badge-' + field);
+  if (isNaN(val)) { badge.style.background='#eee'; badge.style.color='#999'; badge.textContent='—'; return; }
+  let ok = false;
+  if (field === 'ground') { ok = val <= 5; badge.textContent = val + ' Ω'; }
+  else if (field === 'continuity') { ok = val < 0.5; badge.textContent = val + ' Ω'; }
+  else if (field === 'voltage') {
+    ok = (val >= 215 && val <= 225) || (val >= 375 && val <= 385);
+    badge.textContent = val + ' V';
+  }
+  badge.className = 'val-badge ' + (ok ? 'val-ok' : 'val-err');
+}
+
+// Form submit
+document.getElementById('inspection-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  document.getElementById('submit-text').style.display = 'none';
+  document.getElementById('submit-spinner').classList.add('show');
+
+  const ppe = [...document.querySelectorAll('input[name=ppe]:checked')].map(c => c.value);
+  const equipment = [...document.querySelectorAll('input[name=equipment]:checked')].map(c => c.value);
+
+  const payload = {
+    code_id: document.getElementById('code_id').value,
+    location: document.getElementById('location').value,
+    technician: document.getElementById('technician').value,
+    ground: document.getElementById('ground').value,
+    continuity: document.getElementById('continuity').value,
+    voltage: document.getElementById('voltage').value,
+    ppe, equipment
+  };
+
+  try {
+    const res = await fetch('/api/inspect', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    showResult(data);
+    await loadRecords();
+  } catch(err) {
+    alert('เกิดข้อผิดพลาด: ' + err.message);
+  }
+
+  btn.disabled = false;
+  document.getElementById('submit-text').style.display = 'inline';
+  document.getElementById('submit-spinner').classList.remove('show');
+});
+
+function showResult(data) {
+  const panel = document.getElementById('result-panel');
+  const box = document.getElementById('result-box');
+  const title = document.getElementById('result-title');
+  const sub = document.getElementById('result-sub');
+
+  box.className = 'result-box result-' + data.result;
+  const icons = {PASS:'✅', FAIL:'❌', CRITICAL:'🚨', STOP:'🛑'};
+  const msgs = {
+    PASS: 'งานผ่านมาตรฐาน — พร้อมใช้งาน',
+    FAIL: 'ต้องแก้ไขและตรวจซ้ำ',
+    CRITICAL: 'งานโมฆะ หยุดใช้งานทันที',
+    STOP: 'PPE ไม่ครบ — หยุดงานทันที'
+  };
+  title.textContent = icons[data.result] + ' ' + data.result;
+  sub.textContent = msgs[data.result] || '';
+
+  // Issues
+  const ic = document.getElementById('issues-container');
+  if (data.issues && data.issues.length > 0) {
+    ic.innerHTML = '<div style="font-weight:700;margin-bottom:8px;color:#c00">⚠️ ปัญหาที่พบ:</div>' +
+      data.issues.map(i => `<div class="issue-item">❌ ${i}</div>`).join('');
+  } else {
+    ic.innerHTML = '<div style="color:var(--green);font-weight:700;margin-top:10px">✅ ไม่พบปัญหา ผ่านทุกหัวข้อ</div>';
+  }
+
+  // Training
+  const tc = document.getElementById('training-container');
+  if (data.training && data.training.length > 0) {
+    const typeClass = {
+      'New Skill': 'tc-new', 'Reskill': 'tc-reskill', 'Upskill': 'tc-upskill'
+    };
+    tc.innerHTML = '<div class="training-title">🎓 Training Auto Trigger — เรียนทันที</div>' +
+      data.training.map(t => `
+        <div class="training-card">
+          <div class="tc-issue">⚠️ ${t.issue}</div>
+          <div class="tc-info">
+            <span class="tc-tag ${typeClass[t.type] || ''}">${t.type}</span>
+            <span class="tc-tag tc-level-${t.level}">ความเสี่ยง: ${t.level}</span>
+            <span class="tc-tag" style="background:#e8f0fe;color:var(--blue)">📚 ${t.course}</span>
+            <span class="tc-tag" style="background:#f5f5f5;color:#555">⏱ ${t.duration}</span>
+          </div>
+        </div>`).join('');
+  } else {
+    tc.innerHTML = '';
+  }
+
+  panel.style.display = 'block';
+  panel.scrollIntoView({behavior:'smooth'});
+}
+
+async function loadRecords() {
+  const res = await fetch('/api/records');
+  allRecords = await res.json();
+
+  const tbody = document.getElementById('records-body');
+  if (allRecords.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="12" style="color:#aaa;padding:20px">ยังไม่มีข้อมูล</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = [...allRecords].reverse().map(r => {
+    const ppeOk = r.ppe.length === 4;
+    const eqOk = r.equipment.length === 4;
+    const issues = r.issues.length > 0 ? r.issues.join(', ') : '—';
+    return `<tr>
+      <td>${r.id}</td>
+      <td>${r.date}</td>
+      <td><strong>${r.code_id}</strong></td>
+      <td style="text-align:left">${r.location || r.location_info?.name || '—'}</td>
+      <td>${r.technician}</td>
+      <td>${ppeOk ? '✅' : '❌'}</td>
+      <td>${r.ground} Ω</td>
+      <td>${r.continuity} Ω</td>
+      <td>${r.voltage} V</td>
+      <td>${eqOk ? '✅' : '❌'}</td>
+      <td style="text-align:left;font-size:12px">${issues}</td>
+      <td><span class="badge-${r.result}">${r.result}</span></td>
+    </tr>`;
+  }).join('');
+
+  // Summary
+  const total = allRecords.length;
+  const pass = allRecords.filter(r => r.result === 'PASS').length;
+  const fail = allRecords.filter(r => r.result === 'FAIL').length;
+  const crit = allRecords.filter(r => r.result === 'CRITICAL').length;
+  const stop = allRecords.filter(r => r.result === 'STOP').length;
+  document.querySelector('.sum-total').textContent = `รวม: ${total}`;
+  document.querySelector('.sum-pass').textContent = `✅ PASS: ${pass}`;
+  document.querySelector('.sum-fail').textContent = `❌ FAIL: ${fail}`;
+  document.querySelector('.sum-crit').textContent = `🚨 CRITICAL: ${crit}`;
+  document.querySelector('.sum-stop').textContent = `🛑 STOP: ${stop}`;
+}
+
+function resetForm() {
+  document.getElementById('inspection-form').reset();
+  document.querySelectorAll('.ppe-item').forEach(l => l.classList.remove('checked'));
+  document.getElementById('ppe-status').textContent = 'กรุณาเลือก PPE';
+  document.getElementById('eq-status').textContent = 'กรุณาตรวจสอบอุปกรณ์';
+  ['ground','continuity','voltage'].forEach(f => {
+    const b = document.getElementById('badge-' + f);
+    b.className = 'val-badge'; b.style.background='#eee'; b.style.color='#999'; b.textContent='—';
+  });
+  document.getElementById('result-panel').style.display = 'none';
+  document.getElementById('loc-info').classList.remove('show');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// Load existing on page load
+loadRecords();
+</script>
+</body>
+</html>

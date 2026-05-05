@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAFETY-EE SYSTEM — Plan B Media</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root {
+  --blue:#1F4E79; --green:#1a7a3b; --red:#c00000;
+  --orange:#e06c00; --purple:#7030A0; --yellow:#ffc000;
+  --pass:#c6efce; --fail:#ffc7ce; --crit:#ff4444; --stop:#ffeb9c;
+  --gray:#f5f7fa; --border:#d0d7de;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI','TH Sarabun New',sans-serif;background:var(--gray);color:#1a1a2e;font-size:15px}
+
+.header{background:linear-gradient(135deg,var(--blue),#2e6db4);color:#fff;padding:16px 24px;
+  display:flex;align-items:center;gap:16px;box-shadow:0 2px 8px #0003}
+.header .logo{font-size:26px;font-weight:900;letter-spacing:2px}
+.header .sub{font-size:13px;opacity:.8}
+.badge{background:var(--yellow);color:var(--blue);font-weight:800;padding:4px 12px;
+  border-radius:20px;font-size:12px;margin-left:auto;white-space:nowrap}
+
+.container{max-width:1100px;margin:24px auto;padding:0 16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:700px){.grid2{grid-template-columns:1fr}}
+
+.card{background:#fff;border-radius:12px;border:1px solid var(--border);
+  box-shadow:0 2px 8px #0001;overflow:hidden}
+.card-header{padding:14px 20px;font-weight:700;font-size:15px;
+  display:flex;align-items:center;gap:8px}
+.card-body{padding:20px}
+.step1 .card-header{background:#e8f5e9;color:var(--green)}
+.step2 .card-header{background:#fff3e0;color:var(--orange)}
+.step3 .card-header{background:#e3f2fd;color:var(--blue)}
+.step4 .card-header{background:#f3e5f5;color:var(--purple)}
+
+label.form-label{display:block;font-size:13px;font-weight:600;margin-bottom:4px;color:#444}
+input[type=text],input[type=number],select{width:100%;padding:9px 12px;
+  border:1.5px solid var(--border);border-radius:8px;font-size:14px;
+  font-family:inherit;transition:border .2s;background:#fafafa}
+input:focus,select:focus{outline:none;border-color:var(--blue);
+  background:#fff;box-shadow:0 0 0 3px #1f4e7920}
+.form-row{margin-bottom:14px}
+.hint{font-size:11px;color:#888;margin-top:3px}
+
+.ppe-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ppe-item{display:flex;align-items:center;gap:10px;padding:10px 14px;
+  border:2px solid var(--border);border-radius:10px;cursor:pointer;
+  transition:all .2s;background:#fafafa}
+.ppe-item:hover{border-color:var(--blue);background:#e8f0fe}
+.ppe-item input[type=checkbox]{width:18px;height:18px;accent-color:var(--green)}
+.ppe-item.checked{border-color:var(--green);background:var(--pass)}
+.ppe-item .icon{font-size:22px}
+.ppe-item .lbl{font-weight:600;font-size:13px}
+
+.val-row{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+.val-row input{flex:1}
+.val-badge{padding:6px 10px;border-radius:6px;font-size:12px;font-weight:700;white-space:nowrap}
+.val-ok{background:var(--pass);color:var(--green)}
+.val-err{background:var(--fail);color:var(--red)}
+
+.btn{padding:12px 28px;border:none;border-radius:10px;font-size:15px;
+  font-weight:700;cursor:pointer;transition:all .2s;font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{background:#163d61;transform:translateY(-1px)}
+.btn-export{background:#217346;color:#fff}
+.btn-export:hover{background:#1a5c38}
+.btn-reset{background:#6c757d;color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
+
+#result-panel{display:none;margin-top:24px}
+.result-box{padding:24px;border-radius:14px;text-align:center;border:3px solid;
+  animation:popIn .4s ease}
+@keyframes popIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+.result-PASS{background:var(--pass);border-color:var(--green);color:var(--green)}
+.result-FAIL{background:var(--fail);border-color:var(--red);color:var(--red)}
+.result-CRITICAL{background:#ffdddd;border-color:var(--crit);color:var(--crit)}
+.result-STOP{background:var(--stop);border-color:var(--orange);color:var(--orange)}
+.result-title{font-size:48px;font-weight:900;letter-spacing:4px}
+.result-sub{font-size:16px;margin-top:6px}
+
+.issues-list{margin-top:14px}
+.issue-item{display:flex;align-items:flex-start;gap:8px;padding:8px 12px;
+  margin-bottom:6px;background:#fff5f5;border-left:4px solid var(--red);
+  border-radius:4px;font-size:14px}
+
+.training-section{margin-top:20px}
+.training-title{font-size:16px;font-weight:700;color:var(--purple);
+  margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.training-card{background:#f3e5f5;border:1.5px solid #ce93d8;
+  border-radius:10px;padding:14px;margin-bottom:10px}
+.tc-issue{font-weight:700;color:var(--purple);margin-bottom:6px}
+.tc-info{display:flex;gap:10px;flex-wrap:wrap}
+.tc-tag{padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700}
+.tc-new{background:#ff6b6b;color:#fff}
+.tc-reskill{background:#ffa726;color:#fff}
+.tc-upskill{background:#42a5f5;color:#fff}
+
+.records-section{margin-top:30px}
+.records-title{font-size:18px;font-weight:700;margin-bottom:14px;color:var(--blue);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--blue);color:#fff;padding:10px 12px;text-align:center;white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--border);text-align:center}
+tr:nth-child(even) td{background:#f0f4f8}
+.badge-PASS{background:var(--pass);color:var(--green);padding:3px 10px;border-radius:12px;font-weight:700}
+.badge-FAIL{background:var(--fail);color:var(--red);padding:3px 10px;border-radius:12px;font-weight:700}
+.badge-CRITICAL{background:var(--crit);color:#fff;padding:3px 10px;border-radius:12px;font-weight:700}
+.badge-STOP{background:var(--stop);color:var(--orange);padding:3px 10px;border-radius:12px;font-weight:700}
+
+.summary-bar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.sum-item{padding:10px 20px;border-radius:10px;font-weight:700;font-size:14px;
+  text-align:center;flex:1;min-width:100px}
+.sum-total{background:var(--blue);color:#fff}
+.sum-pass{background:var(--pass);color:var(--green)}
+.sum-fail{background:var(--fail);color:var(--red)}
+.sum-crit{background:var(--crit);color:#fff}
+.sum-stop{background:var(--stop);color:var(--orange)}
+
+.loc-info{background:#e8f0fe;border-radius:8px;padding:10px 14px;
+  font-size:13px;margin-top:8px;display:none}
+.loc-info.show{display:block}
+
+.step-num{display:inline-flex;align-items:center;justify-content:center;
+  width:26px;height:26px;border-radius:50%;background:currentColor;
+  font-size:13px;font-weight:900;flex-shrink:0}
+.step-num span{color:#fff}
+
+footer{text-align:center;padding:20px;font-size:12px;color:#888;
+  margin-top:30px;border-top:1px solid var(--border)}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{display:inline-block;width:16px;height:16px;border:3px solid #fff3;
+  border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+
+.rules-bar{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0;padding:14px;
+  background:#fff3cd;border-radius:10px;border:1px solid #ffc107}
+.rule-tag{padding:5px 12px;border-radius:8px;font-size:12px;font-weight:700;
+  background:#1F4E79;color:#fff}
+.btn-mini{padding:5px 12px;border:none;border-radius:8px;font-size:12px;font-weight:700;
+  background:#fff;color:var(--blue);cursor:pointer;border:1px solid var(--blue)}
+.btn-mini:hover{background:var(--blue);color:#fff}
+
+/* Photo upload */
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.photo-slot{position:relative;border:2px dashed var(--border);border-radius:10px;
+  aspect-ratio:1;background:#fafafa;cursor:pointer;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;
+  transition:all .2s}
+.photo-slot:hover{border-color:var(--blue);background:#e8f0fe}
+.photo-slot.has-photo{border-style:solid;border-color:var(--green);background:#fff}
+.photo-slot input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.photo-slot .ph-icon{font-size:32px;color:#aaa}
+.photo-slot .ph-label{font-size:11px;color:#666;text-align:center;font-weight:600;margin-top:4px;padding:0 6px}
+.photo-slot img{width:100%;height:100%;object-fit:cover}
+.photo-slot .ph-clear{position:absolute;top:4px;right:4px;background:#c00;color:#fff;
+  border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-weight:700;
+  display:none;align-items:center;justify-content:center;font-size:12px}
+.photo-slot.has-photo .ph-clear{display:flex}
+.photo-slot.has-photo .ph-icon,
+.photo-slot.has-photo .ph-label{display:none}
+.photo-slot .ph-check{position:absolute;bottom:4px;left:4px;background:var(--green);
+  color:#fff;border-radius:50%;width:22px;height:22px;display:none;
+  align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.photo-slot.has-photo .ph-check{display:flex}
+
+/* Modal */
+.modal{position:fixed;inset:0;background:#0008;display:none;align-items:center;
+  justify-content:center;z-index:100;padding:20px}
+.modal.show{display:flex}
+.modal-box{background:#fff;border-radius:14px;max-width:600px;width:100%;
+  max-height:90vh;overflow-y:auto;padding:24px;animation:popIn .3s}
+.modal-title{font-size:18px;font-weight:700;color:var(--blue);margin-bottom:16px;
+  display:flex;justify-content:space-between;align-items:center}
+.modal-close{background:none;border:none;font-size:24px;cursor:pointer;color:#888}
+.master-row{display:grid;grid-template-columns:80px 1fr 130px 80px 30px;gap:6px;
+  margin-bottom:6px;align-items:center}
+.master-row input{padding:6px 8px;font-size:12px}
+.master-row .del{background:#c00;color:#fff;border:none;border-radius:6px;
+  cursor:pointer;width:28px;height:28px;font-weight:700}
+.sheets-status{padding:10px;border-radius:8px;font-size:13px;margin-top:10px}
+.sheets-status.ok{background:var(--pass);color:var(--green)}
+.sheets-status.err{background:var(--fail);color:var(--red)}
+.sheets-status.info{background:#e3f2fd;color:var(--blue)}
+.code-block{background:#1e1e1e;color:#9cdcfe;padding:12px;border-radius:8px;
+  font-family:'Consolas',monospace;font-size:11px;overflow-x:auto;
+  white-space:pre;margin:8px 0;max-height:200px;overflow-y:auto}
+.step-photo .card-header{background:#fff8e1;color:#f57c00}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="logo">⚡ SAFETY-EE SYSTEM</div>
+    <div class="sub">ระบบตรวจสอบงานไฟฟ้าป้ายโฆษณา (Inspection + Training) — Plan B Media Standard</div>
+  </div>
+  <div class="badge">⚡ SAFETY FIRST</div>
+</div>
+
+<div class="container">
+
+  <div class="rules-bar">
+    <span style="font-weight:700;margin-right:4px">📋 กฎ:</span>
+    <span class="rule-tag">🚫 ไม่มีรูป = ไม่ตรวจ</span>
+    <span class="rule-tag">⛑️ PPE ไม่ครบ = หยุดงาน</span>
+    <span class="rule-tag">⚡ ค่าเกิน = อันตราย</span>
+    <span class="rule-tag">📍 Location ผิด = งานโมฆะ</span>
+    <span style="margin-left:auto;display:flex;gap:6px">
+      <button type="button" class="btn-mini" onclick="openMasterModal()">⚙️ Master Data</button>
+      <button type="button" class="btn-mini" onclick="openSheetsModal()">📤 Google Sheets</button>
+    </span>
+  </div>
+
+  <form id="inspection-form">
+    <div class="grid2">
+
+      <!-- Step 1 -->
+      <div class="card step1">
+        <div class="card-header">
+          <div class="step-num" style="color:var(--green)"><span>1</span></div>
+          รับข้อมูลจากช่าง
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            <label class="form-label">รหัสป้าย (Code ID) *</label>
+            <select id="code_id" required onchange="checkLocation()">
+              <option value="">-- เลือก Code ID --</option>
+            </select>
+            <div class="loc-info" id="loc-info"></div>
+          </div>
+          <div class="form-row">
+            <label class="form-label">ชื่อช่างผู้ตรวจ *</label>
+            <input type="text" id="technician" placeholder="ชื่อ-นามสกุล" required>
+          </div>
+          <div class="form-row">
+            <label class="form-label">หมายเหตุ</label>
+            <input type="text" id="note" placeholder="(ถ้ามี)">
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: PPE -->
+      <div class="card step2">
+        <div class="card-header">
+          <div class="step-num" style="color:var(--orange)"><span>2</span></div>
+          ตรวจ PPE
+          <span style="margin-left:auto;font-size:12px;font-weight:400;color:#666">ต้องครบ 4 รายการ</span>
+        </div>
+        <div class="card-body">
+          <div class="ppe-grid">
+            <label class="ppe-item" id="lbl-helmet">
+              <input type="checkbox" name="ppe" value="helmet" onchange="toggleCheck(this,'ppe','ppe-status',4)">
+              <span class="icon">⛑️</span><span class="lbl">หมวกนิรภัย</span>
+            </label>
+            <label class="ppe-item" id="lbl-gloves">
+              <input type="checkbox" name="ppe" value="gloves" onchange="toggleCheck(this,'ppe','ppe-status',4)">
+              <span class="icon">🧤</span><span class="lbl">ถุงมือ</span>
+            </label>
+            <label class="ppe-item" id="lbl-boots">
+              <input type="checkbox" name="ppe" value="boots" onchange="toggleCheck(this,'ppe','ppe-status',4)">
+              <span class="icon">👢</span><span class="lbl">รองเท้าเซฟตี้</span>
+            </label>
+            <label class="ppe-item" id="lbl-tools">
+              <input type="checkbox" name="ppe" value="tools" onchange="toggleCheck(this,'ppe','ppe-status',4)">
+              <span class="icon">🔧</span><span class="lbl">เครื่องมือครบ</span>
+            </label>
+          </div>
+          <div id="ppe-status" style="margin-top:10px;font-size:13px;color:#888;text-align:center">
+            กรุณาเลือก PPE
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Electrical -->
+      <div class="card step3">
+        <div class="card-header">
+          <div class="step-num" style="color:var(--blue)"><span>3</span></div>
+          ตรวจค่าทางไฟฟ้า
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            <label class="form-label">Ground Resistance (Ω)</label>
+            <div class="val-row">
+              <input type="number" id="ground" placeholder="เช่น 3.21" step="0.01" min="0" oninput="checkVal('ground')">
+              <span class="val-badge" id="badge-ground" style="background:#eee;color:#999">—</span>
+            </div>
+            <div class="hint">มาตรฐาน: ≤ 5Ω</div>
+          </div>
+          <div class="form-row">
+            <label class="form-label">Continuity (Ω)</label>
+            <div class="val-row">
+              <input type="number" id="continuity" placeholder="เช่น 0.18" step="0.01" min="0" oninput="checkVal('continuity')">
+              <span class="val-badge" id="badge-continuity" style="background:#eee;color:#999">—</span>
+            </div>
+            <div class="hint">มาตรฐาน: &lt; 0.5Ω</div>
+          </div>
+          <div class="form-row">
+            <label class="form-label">Voltage (V)</label>
+            <div class="val-row">
+              <input type="number" id="voltage" placeholder="เช่น 220" step="1" oninput="checkVal('voltage')">
+              <span class="val-badge" id="badge-voltage" style="background:#eee;color:#999">—</span>
+            </div>
+            <div class="hint">มาตรฐาน: 220V หรือ 380V</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Equipment -->
+      <div class="card step4">
+        <div class="card-header">
+          <div class="step-num" style="color:var(--purple)"><span>4</span></div>
+          ตรวจอุปกรณ์ MDB
+        </div>
+        <div class="card-body">
+          <div class="ppe-grid">
+            <label class="ppe-item" id="lbl-breaker">
+              <input type="checkbox" name="equipment" value="breaker" onchange="toggleCheck(this,'equipment','eq-status',4)">
+              <span class="icon">⚡</span><span class="lbl">Breaker</span>
+            </label>
+            <label class="ppe-item" id="lbl-timer">
+              <input type="checkbox" name="equipment" value="timer" onchange="toggleCheck(this,'equipment','eq-status',4)">
+              <span class="icon">⏱️</span><span class="lbl">Timer</span>
+            </label>
+            <label class="ppe-item" id="lbl-magnetic">
+              <input type="checkbox" name="equipment" value="magnetic" onchange="toggleCheck(this,'equipment','eq-status',4)">
+              <span class="icon">🔌</span><span class="lbl">Magnetic</span>
+            </label>
+            <label class="ppe-item" id="lbl-wiring">
+              <input type="checkbox" name="equipment" value="wiring" onchange="toggleCheck(this,'equipment','eq-status',4)">
+              <span class="icon">🔋</span><span class="lbl">Wiring เรียบร้อย</span>
+            </label>
+          </div>
+          <div id="eq-status" style="margin-top:10px;font-size:13px;color:#888;text-align:center">
+            กรุณาตรวจสอบอุปกรณ์
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Step 5: Photos -->
+    <div class="card step-photo" style="margin-top:20px">
+      <div class="card-header">
+        <div class="step-num" style="color:#f57c00"><span>5</span></div>
+        📸 อัปโหลดรูปหลักฐาน
+        <span style="margin-left:auto;font-size:12px;font-weight:400;color:#666">ถ่ายหรือเลือกจากเครื่อง — ไม่มีรูป = ไม่ตรวจ</span>
+      </div>
+      <div class="card-body">
+        <div class="photo-grid">
+          <label class="photo-slot" data-key="photo_tool">
+            <input type="file" accept="image/*" capture="environment" onchange="handlePhoto(this,'photo_tool')">
+            <div class="ph-icon">📷</div>
+            <div class="ph-label">เครื่องมือวัด</div>
+            <button type="button" class="ph-clear" onclick="event.preventDefault();clearPhoto('photo_tool')">✕</button>
+            <div class="ph-check">✓</div>
+          </label>
+          <label class="photo-slot" data-key="photo_mdb">
+            <input type="file" accept="image/*" capture="environment" onchange="handlePhoto(this,'photo_mdb')">
+            <div class="ph-icon">📷</div>
+            <div class="ph-label">หน้างาน MDB</div>
+            <button type="button" class="ph-clear" onclick="event.preventDefault();clearPhoto('photo_mdb')">✕</button>
+            <div class="ph-check">✓</div>
+          </label>
+          <label class="photo-slot" data-key="photo_ppe">
+            <input type="file" accept="image/*" capture="environment" onchange="handlePhoto(this,'photo_ppe')">
+            <div class="ph-icon">📷</div>
+            <div class="ph-label">PPE ช่าง</div>
+            <button type="button" class="ph-clear" onclick="event.preventDefault();clearPhoto('photo_ppe')">✕</button>
+            <div class="ph-check">✓</div>
+          </label>
+          <label class="photo-slot" data-key="photo_ground">
+            <input type="file" accept="image/*" capture="environment" onchange="handlePhoto(this,'photo_ground')">
+            <div class="ph-icon">📷</div>
+            <div class="ph-label">Ground Tester</div>
+            <button type="button" class="ph-clear" onclick="event.preventDefault();clearPhoto('photo_ground')">✕</button>
+            <div class="ph-check">✓</div>
+          </label>
+          <label class="photo-slot" data-key="photo_voltage">
+            <input type="file" accept="image/*" capture="environment" onchange="handlePhoto(this,'photo_voltage')">
+            <div class="ph-icon">📷</div>
+            <div class="ph-label">Voltage Meter</div>
+            <button type="button" class="ph-clear" onclick="event.preventDefault();clearPhoto('photo_voltage')">✕</button>
+            <div class="ph-check">✓</div>
+          </label>
+          <label class="photo-slot" data-key="photo_location">
+            <input type="file" accept="image/*" capture="environment" onchange="handlePhoto(this,'photo_location')">
+            <div class="ph-icon">📷</div>
+            <div class="ph-label">ป้าย/Location</div>
+            <button type="button" class="ph-clear" onclick="event.preventDefault();clearPhoto('photo_location')">✕</button>
+            <div class="ph-check">✓</div>
+          </label>
+        </div>
+        <div id="photo-status" style="margin-top:10px;font-size:13px;color:#888;text-align:center">
+          ยังไม่มีรูป (0/6)
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button type="submit" class="btn btn-primary" id="submit-btn">
+        🔍 ตรวจสอบและสรุปผล
+      </button>
+      <button type="button" class="btn btn-reset" onclick="resetForm()">↺ เริ่มใหม่</button>
+    </div>
+  </form>
+
+  <!-- ===== Master Data Modal ===== -->
+  <div class="modal" id="master-modal">
+    <div class="modal-box">
+      <div class="modal-title">
+        <span>⚙️ จัดการ Master Data</span>
+        <button class="modal-close" onclick="closeModal('master-modal')">×</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <button class="btn-mini" onclick="addMasterRow()">➕ เพิ่ม</button>
+        <label class="btn-mini" style="cursor:pointer">
+          📥 Import CSV
+          <input type="file" accept=".csv" hidden onchange="importCSV(this)">
+        </label>
+        <button class="btn-mini" onclick="exportMasterCSV()">📤 Export CSV</button>
+        <button class="btn-mini" onclick="resetMasterDefault()" style="color:#c00;border-color:#c00">↺ Reset Default</button>
+      </div>
+      <div style="font-size:11px;color:#888;margin-bottom:6px;display:grid;grid-template-columns:80px 1fr 130px 80px 30px;gap:6px">
+        <div>Code ID</div><div>ชื่อสถานที่</div><div>พื้นที่</div><div>ขนาด</div><div></div>
+      </div>
+      <div id="master-list"></div>
+      <div class="btn-row" style="margin-top:16px">
+        <button class="btn btn-primary" onclick="saveMasterFromUI()">💾 บันทึก</button>
+      </div>
+      <div style="font-size:11px;color:#888;margin-top:10px;padding:8px;background:#f5f7fa;border-radius:6px">
+        💡 CSV Format: <code>code_id,name,area,size</code> (1 บรรทัด/รายการ)
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Google Sheets Modal ===== -->
+  <div class="modal" id="sheets-modal">
+    <div class="modal-box">
+      <div class="modal-title">
+        <span>📤 Google Sheets Sync</span>
+        <button class="modal-close" onclick="closeModal('sheets-modal')">×</button>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <label class="form-label">Google Apps Script Web App URL</label>
+        <input type="text" id="sheets-url" placeholder="https://script.google.com/macros/s/.../exec"
+               style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px">
+        <div class="hint">วาง URL ที่ได้จาก Apps Script Deploy → Web App</div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="sheets-auto" style="width:18px;height:18px">
+          <span>🔄 Auto-sync ทุกครั้งที่บันทึก</span>
+        </label>
+      </div>
+
+      <div class="btn-row" style="margin-top:0">
+        <button class="btn btn-primary" onclick="saveSheetsConfig()">💾 บันทึก URL</button>
+        <button class="btn btn-export" onclick="syncAllToSheets()">⬆️ Sync ทั้งหมด (<span id="sync-count">0</span>)</button>
+        <button class="btn btn-mini" onclick="testSheetsConnection()" style="padding:12px 16px">🔗 Test Connect</button>
+      </div>
+
+      <div id="sheets-status"></div>
+
+      <hr style="margin:20px 0;border:none;border-top:1px solid var(--border)">
+
+      <details>
+        <summary style="cursor:pointer;font-weight:700;color:var(--blue)">📖 วิธีตั้งค่า Google Sheets (คลิกดู)</summary>
+        <ol style="margin:10px 0 0 20px;font-size:13px;line-height:1.8">
+          <li>เปิด <a href="https://sheets.new" target="_blank">sheets.new</a> สร้าง Google Sheet ใหม่</li>
+          <li>เมนู <strong>Extensions → Apps Script</strong></li>
+          <li>ลบโค้ดเดิม วางโค้ดด้านล่างนี้ทั้งหมด แล้วกด <strong>Save</strong> (Ctrl+S)</li>
+          <li>กด <strong>Deploy → New deployment</strong></li>
+          <li>เลือก type = <strong>Web app</strong></li>
+          <li>"Who has access" = <strong>Anyone</strong> → กด Deploy</li>
+          <li>คัดลอก <strong>Web app URL</strong> มาวางในช่องด้านบน</li>
+          <li>กด "Test Connect" เพื่อทดสอบ</li>
+        </ol>
+        <div style="margin-top:10px;font-weight:700;color:var(--blue)">📋 Apps Script Code:</div>
+        <div class="code-block" id="apps-script-code">// วางโค้ดนี้ใน Apps Script
+function doPost(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const data = JSON.parse(e.postData.contents);
+
+    if (data.action === 'ping') {
+      return ContentService.createTextOutput(JSON.stringify({ok:true,msg:'Connected'}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    let sheet = ss.getSheetByName('Inspection');
+    if (!sheet) {
+      sheet = ss.insertSheet('Inspection');
+      sheet.appendRow(['ID','Date','Code ID','Location','Area','Technician',
+        'PPE','Ground','Continuity','Voltage','Equipment',
+        'LocationOK','Result','Issues','Training','PhotoLinks','Note']);
+      sheet.getRange(1,1,1,17).setFontWeight('bold')
+        .setBackground('#1F4E79').setFontColor('#fff');
+    }
+
+    // Upload photos to Drive
+    const photoLinks = [];
+    if (data.photos) {
+      const folder = getOrCreateFolder('SAFETY-EE Photos');
+      Object.entries(data.photos).forEach(([key, b64]) => {
+        if (!b64) return;
+        const blob = Utilities.newBlob(
+          Utilities.base64Decode(b64.split(',')[1]),
+          'image/jpeg',
+          `${data.id}_${key}.jpg`);
+        const file = folder.createFile(blob);
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        photoLinks.push(`${key}: ${file.getUrl()}`);
+      });
+    }
+
+    sheet.appendRow([
+      data.id, data.date, data.code_id, data.location_name, data.location_area,
+      data.technician, data.ppe.join(','),
+      data.ground, data.continuity, data.voltage,
+      data.equipment.join(','), data.location_ok ? 'YES' : 'NO',
+      data.result, data.issues.join(' | '),
+      data.training.map(t=>t.issue+'→'+t.course).join(' | '),
+      photoLinks.join('\n'), data.note||''
+    ]);
+
+    return ContentService.createTextOutput(JSON.stringify({ok:true,id:data.id}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ok:false,err:err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function getOrCreateFolder(name) {
+  const folders = DriveApp.getFoldersByName(name);
+  return folders.hasNext() ? folders.next() : DriveApp.createFolder(name);
+}
+
+function doGet() {
+  return ContentService.createTextOutput('SAFETY-EE Endpoint Active');
+}</div>
+        <button class="btn-mini" onclick="copyAppsScript()" style="margin-top:6px">📋 Copy Code</button>
+      </details>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div id="result-panel">
+    <div class="result-box" id="result-box">
+      <div class="result-title" id="result-title"></div>
+      <div class="result-sub" id="result-sub"></div>
+    </div>
+    <div id="issues-container" class="issues-list"></div>
+    <div id="training-container" class="training-section"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="resetForm()">+ ตรวจรายการถัดไป</button>
+    </div>
+  </div>
+
+  <!-- Records -->
+  <div class="records-section">
+    <div class="records-title">
+      <span>📋 ประวัติการตรวจ (<span id="rec-count">0</span> รายการ)</span>
+      <button class="btn btn-export" onclick="exportExcel()">📊 Export Excel</button>
+    </div>
+    <div class="summary-bar">
+      <div class="sum-item sum-total" id="s-total">รวม: 0</div>
+      <div class="sum-item sum-pass" id="s-pass">✅ PASS: 0</div>
+      <div class="sum-item sum-fail" id="s-fail">❌ FAIL: 0</div>
+      <div class="sum-item sum-crit" id="s-crit">🚨 CRITICAL: 0</div>
+      <div class="sum-item sum-stop" id="s-stop">🛑 STOP: 0</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>วันที่</th><th>Code ID</th><th>Location</th>
+            <th>ช่าง</th><th>PPE</th><th>Ground(Ω)</th><th>Cont.(Ω)</th>
+            <th>Volt.(V)</th><th>อุปกรณ์</th><th>ปัญหา</th><th>ผล</th>
+          </tr>
+        </thead>
+        <tbody id="records-body">
+          <tr><td colspan="12" style="color:#aaa;padding:20px">ยังไม่มีข้อมูล — กรอกแบบฟอร์มด้านบน</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  ⚡ SAFETY-EE SYSTEM | Plan B Media Engineering Excellence<br>
+  มาตรฐาน วสท. (วิศวกรรมสถานแห่งประเทศไทย ในพระบรมราชูปถัมภ์) | WORK SAFE GO HOME SAFE
+</footer>
+
+<script>
+// ===================== DATA =====================
+// MASTER DATA — แก้ไข/เพิ่มได้ที่นี่ หรือ Import CSV ผ่านปุ่มด้านล่าง
+let MASTER_DATA = JSON.parse(localStorage.getItem('safetyee_master')) || {
+  "10.1": {name:"ประชาอุทิศ",         area:"สมุทรปราการ (007)", type:"ป้ายโฆษณา", size:"5x15 m"},
+  "10.2": {name:"สุขุมวิท 101",       area:"กรุงเทพ (001)",     type:"ป้ายโฆษณา", size:"6x18 m"},
+  "10.3": {name:"ลาดพร้าว 87",        area:"กรุงเทพ (001)",     type:"ป้ายโฆษณา", size:"5x15 m"},
+  "11.1": {name:"รามคำแหง 24",        area:"กรุงเทพ (002)",     type:"ป้ายโฆษณา", size:"4x12 m"},
+  "11.2": {name:"บางนา กม.3",          area:"กรุงเทพ (003)",     type:"ป้ายโฆษณา", size:"6x18 m"},
+  "11.3": {name:"บางนา-ตราด กม.8",    area:"สมุทรปราการ (008)", type:"ป้ายโฆษณา", size:"5x15 m"},
+  "12.1": {name:"อนุสาวรีย์ชัย",      area:"กรุงเทพ (004)",     type:"ป้ายโฆษณา", size:"4x12 m"},
+  "12.2": {name:"ดอนเมือง ขาออก",     area:"กรุงเทพ (005)",     type:"ป้ายโฆษณา", size:"5x15 m"},
+  "12.3": {name:"วิภาวดี 64",          area:"กรุงเทพ (005)",     type:"ป้ายโฆษณา", size:"6x18 m"},
+  "13.1": {name:"เซ็นทรัล ลาดพร้าว",  area:"กรุงเทพ (006)",     type:"ป้ายโฆษณา", size:"5x15 m"},
+  "13.2": {name:"เซ็นทรัล ปิ่นเกล้า", area:"กรุงเทพ (006)",     type:"ป้ายโฆษณา", size:"4x12 m"},
+  "13.3": {name:"เซ็นทรัล บางนา",     area:"กรุงเทพ (003)",     type:"ป้ายโฆษณา", size:"6x18 m"},
+  "14.1": {name:"พระราม 9",            area:"กรุงเทพ (007)",     type:"ป้ายโฆษณา", size:"5x15 m"},
+  "14.2": {name:"ศรีนครินทร์ กม.5",   area:"สมุทรปราการ (008)", type:"ป้ายโฆษณา", size:"6x18 m"},
+  "14.3": {name:"แจ้งวัฒนะ 14",        area:"นนทบุรี (009)",     type:"ป้ายโฆษณา", size:"5x15 m"},
+  "15.1": {name:"งามวงศ์วาน",          area:"นนทบุรี (009)",     type:"ป้ายโฆษณา", size:"4x12 m"},
+  "15.2": {name:"ติวานนท์ 23",         area:"นนทบุรี (010)",     type:"ป้ายโฆษณา", size:"5x15 m"},
+  "15.3": {name:"รัตนาธิเบศร์",        area:"นนทบุรี (010)",     type:"ป้ายโฆษณา", size:"6x18 m"},
+  "16.1": {name:"ปทุมธานี-รังสิต",    area:"ปทุมธานี (011)",    type:"ป้ายโฆษณา", size:"5x15 m"},
+  "16.2": {name:"รังสิต-นครนายก",      area:"ปทุมธานี (011)",    type:"ป้ายโฆษณา", size:"6x18 m"},
+  "16.3": {name:"คลองหลวง",            area:"ปทุมธานี (012)",    type:"ป้ายโฆษณา", size:"5x15 m"},
+  "17.1": {name:"พระประแดง",          area:"สมุทรปราการ (013)", type:"ป้ายโฆษณา", size:"4x12 m"},
+  "17.2": {name:"สำโรง ขาเข้า",        area:"สมุทรปราการ (013)", type:"ป้ายโฆษณา", size:"6x18 m"},
+  "18.1": {name:"พุทธมณฑลสาย 4",     area:"นครปฐม (014)",      type:"ป้ายโฆษณา", size:"5x15 m"},
+  "18.2": {name:"เพชรเกษม กม.20",     area:"นครปฐม (014)",      type:"ป้ายโฆษณา", size:"6x18 m"},
+  "19.1": {name:"บางพลี กม.12",        area:"สมุทรปราการ (015)", type:"ป้ายโฆษณา", size:"5x15 m"},
+  "19.2": {name:"สุวรรณภูมิ ขาเข้า",  area:"สมุทรปราการ (015)", type:"ป้ายโฆษณา", size:"7x20 m"},
+  "20.1": {name:"ชลบุรี กม.45",        area:"ชลบุรี (016)",      type:"ป้ายโฆษณา", size:"6x18 m"},
+  "20.2": {name:"พัทยา ขาออก",        area:"ชลบุรี (017)",      type:"ป้ายโฆษณา", size:"7x20 m"},
+};
+function saveMasterData(){ localStorage.setItem('safetyee_master', JSON.stringify(MASTER_DATA)); }
+
+const TRAINING_MATRIX = {
+  "ไม่ใส่ PPE":           {level:"สูง",    course:"PPE Safety",              type:"New Skill", dur:"2 ชม."},
+  "Ground เกินมาตรฐาน":   {level:"สูง",    course:"Grounding System",        type:"Reskill",   dur:"3 ชม."},
+  "Continuity เกินมาตรฐาน":{level:"ปานกลาง",course:"Electrical Continuity",  type:"Upskill",   dur:"2 ชม."},
+  "Voltage ไม่ถูกต้อง":   {level:"สูง",    course:"Voltage System",          type:"Upskill",   dur:"3 ชม."},
+  "Location ไม่ตรง":      {level:"วิกฤต",  course:"Location Audit",          type:"Upskill",   dur:"1 ชม."},
+  "อุปกรณ์ไม่ผ่าน":       {level:"ปานกลาง",course:"Equipment Inspection",    type:"Reskill",   dur:"2 ชม."},
+};
+
+let records = JSON.parse(localStorage.getItem('safetyee_records') || '[]');
+let photos = {}; // current form photos: {photo_tool: base64, ...}
+let sheetsConfig = JSON.parse(localStorage.getItem('safetyee_sheets') || '{"url":"","auto":false}');
+
+// ===================== INIT =====================
+function rebuildCodeDropdown() {
+  const sel = document.getElementById('code_id');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">-- เลือก Code ID --</option>';
+  Object.entries(MASTER_DATA).forEach(([code, info]) => {
+    const opt = document.createElement('option');
+    opt.value = code;
+    opt.textContent = `${code} — ${info.name}`;
+    sel.appendChild(opt);
+  });
+  sel.value = cur;
+}
+
+(function init() {
+  rebuildCodeDropdown();
+  renderRecords();
+  document.getElementById('sheets-url').value = sheetsConfig.url || '';
+  document.getElementById('sheets-auto').checked = !!sheetsConfig.auto;
+})();
+
+// ===================== PHOTO UPLOAD =====================
+function handlePhoto(input, key) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    // Compress to max 1280px width
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const max = 1280;
+      let w = img.width, h = img.height;
+      if (w > max) { h = h * (max/w); w = max; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', 0.7);
+      photos[key] = compressed;
+
+      const slot = document.querySelector(`.photo-slot[data-key="${key}"]`);
+      slot.classList.add('has-photo');
+      // Insert image
+      let imgEl = slot.querySelector('img');
+      if (!imgEl) { imgEl = document.createElement('img'); slot.insertBefore(imgEl, slot.firstChild); }
+      imgEl.src = compressed;
+      updatePhotoStatus();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearPhoto(key) {
+  delete photos[key];
+  const slot = document.querySelector(`.photo-slot[data-key="${key}"]`);
+  slot.classList.remove('has-photo');
+  const img = slot.querySelector('img'); if (img) img.remove();
+  const input = slot.querySelector('input[type=file]'); if (input) input.value = '';
+  updatePhotoStatus();
+}
+
+function updatePhotoStatus() {
+  const n = Object.keys(photos).length;
+  const st = document.getElementById('photo-status');
+  if (n === 0) st.innerHTML = '<span style="color:#888">ยังไม่มีรูป (0/6)</span>';
+  else if (n < 3) st.innerHTML = `<span style="color:var(--orange)">⚠️ มี ${n}/6 รูป — ควรครบทั้งหมด</span>`;
+  else st.innerHTML = `<span style="color:var(--green);font-weight:700">✅ มี ${n}/6 รูป</span>`;
+}
+
+// ===================== MODAL =====================
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+window.addEventListener('click', e => {
+  if (e.target.classList.contains('modal')) e.target.classList.remove('show');
+});
+
+function openMasterModal() {
+  renderMasterList();
+  openModal('master-modal');
+}
+function openSheetsModal() {
+  document.getElementById('sync-count').textContent = records.length;
+  openModal('sheets-modal');
+}
+
+// ===================== MASTER DATA MGMT =====================
+function renderMasterList() {
+  const list = document.getElementById('master-list');
+  list.innerHTML = '';
+  Object.entries(MASTER_DATA).forEach(([code, info]) => {
+    addMasterRow(code, info.name, info.area, info.size);
+  });
+}
+
+function addMasterRow(code='', name='', area='', size='') {
+  const list = document.getElementById('master-list');
+  const row = document.createElement('div');
+  row.className = 'master-row';
+  row.innerHTML = `
+    <input type="text" placeholder="10.1" value="${code}" class="m-code">
+    <input type="text" placeholder="ชื่อ" value="${name}" class="m-name">
+    <input type="text" placeholder="พื้นที่" value="${area}" class="m-area">
+    <input type="text" placeholder="ขนาด" value="${size}" class="m-size">
+    <button class="del" onclick="this.parentElement.remove()">×</button>`;
+  list.appendChild(row);
+}
+
+function saveMasterFromUI() {
+  const newData = {};
+  document.querySelectorAll('#master-list .master-row').forEach(row => {
+    const code = row.querySelector('.m-code').value.trim();
+    if (!code) return;
+    newData[code] = {
+      name: row.querySelector('.m-name').value.trim(),
+      area: row.querySelector('.m-area').value.trim(),
+      size: row.querySelector('.m-size').value.trim(),
+      type: 'ป้ายโฆษณา'
+    };
+  });
+  MASTER_DATA = newData;
+  saveMasterData();
+  rebuildCodeDropdown();
+  closeModal('master-modal');
+  alert(`✅ บันทึก Master Data แล้ว (${Object.keys(newData).length} รายการ)`);
+}
+
+function importCSV(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const lines = e.target.result.split(/\r?\n/).filter(l => l.trim());
+    document.getElementById('master-list').innerHTML = '';
+    lines.forEach((line, i) => {
+      if (i === 0 && line.toLowerCase().includes('code')) return; // skip header
+      const [code, name, area, size] = line.split(',').map(s => (s||'').trim());
+      if (code) addMasterRow(code, name, area, size);
+    });
+    alert(`📥 Import ${lines.length} รายการ — กด "บันทึก" เพื่อยืนยัน`);
+  };
+  reader.readAsText(file, 'UTF-8');
+  input.value = '';
+}
+
+function exportMasterCSV() {
+  const lines = ['code_id,name,area,size'];
+  Object.entries(MASTER_DATA).forEach(([code, info]) => {
+    lines.push(`${code},${info.name},${info.area},${info.size||''}`);
+  });
+  const blob = new Blob(['﻿' + lines.join('\n')], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'master_data.csv';
+  a.click();
+}
+
+function resetMasterDefault() {
+  if (!confirm('Reset Master Data กลับเป็นค่าเริ่มต้น?')) return;
+  localStorage.removeItem('safetyee_master');
+  location.reload();
+}
+
+// ===================== GOOGLE SHEETS =====================
+function saveSheetsConfig() {
+  sheetsConfig.url = document.getElementById('sheets-url').value.trim();
+  sheetsConfig.auto = document.getElementById('sheets-auto').checked;
+  localStorage.setItem('safetyee_sheets', JSON.stringify(sheetsConfig));
+  showSheetsStatus('✅ บันทึก URL แล้ว', 'ok');
+}
+
+function showSheetsStatus(msg, type='info') {
+  const s = document.getElementById('sheets-status');
+  s.className = 'sheets-status ' + type;
+  s.innerHTML = msg;
+}
+
+async function postToSheets(payload) {
+  if (!sheetsConfig.url) throw new Error('ยังไม่ได้ตั้ง URL');
+  const res = await fetch(sheetsConfig.url, {
+    method: 'POST',
+    mode: 'no-cors',  // Apps Script doesn't return CORS headers
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body: JSON.stringify(payload)
+  });
+  return res; // no-cors mode → opaque response, can't read body
+}
+
+async function testSheetsConnection() {
+  const url = document.getElementById('sheets-url').value.trim();
+  if (!url) { showSheetsStatus('❌ กรุณาวาง URL ก่อน', 'err'); return; }
+  sheetsConfig.url = url;
+  showSheetsStatus('⏳ กำลังทดสอบ...', 'info');
+  try {
+    await postToSheets({action:'ping'});
+    showSheetsStatus('✅ ส่งข้อมูลสำเร็จ — ลองเช็คใน Google Sheet ว่ามี response ไหม (โหมด no-cors ไม่ได้ตอบกลับ)', 'ok');
+  } catch (err) {
+    showSheetsStatus('❌ Error: ' + err.message, 'err');
+  }
+}
+
+async function syncRecord(rec) {
+  if (!sheetsConfig.url) return false;
+  const payload = {
+    ...rec,
+    location_ok: !!MASTER_DATA[rec.code_id],
+    photos: rec.photos || {}
+  };
+  try {
+    await postToSheets(payload);
+    return true;
+  } catch (err) {
+    console.error('Sync failed:', err);
+    return false;
+  }
+}
+
+async function syncAllToSheets() {
+  if (!sheetsConfig.url) { showSheetsStatus('❌ ยังไม่ได้ตั้ง URL', 'err'); return; }
+  if (records.length === 0) { showSheetsStatus('ℹ️ ยังไม่มีข้อมูล', 'info'); return; }
+  showSheetsStatus(`⏳ กำลัง Sync ${records.length} รายการ...`, 'info');
+  let ok = 0;
+  for (const r of records) {
+    const success = await syncRecord(r);
+    if (success) ok++;
+  }
+  showSheetsStatus(`✅ Sync เสร็จ ${ok}/${records.length} รายการ`, 'ok');
+}
+
+function copyAppsScript() {
+  const code = document.getElementById('apps-script-code').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    alert('📋 Copy โค้ดแล้ว — วางใน Apps Script ได้เลย');
+  });
+}
+
+// ===================== LOCATION =====================
+function checkLocation() {
+  const code = document.getElementById('code_id').value;
+  const info = MASTER_DATA[code];
+  const div = document.getElementById('loc-info');
+  if (info) {
+    div.innerHTML = `📍 <strong>${info.name}</strong> | ${info.area} | ${info.type}`;
+    div.classList.add('show');
+  } else {
+    div.classList.remove('show');
+  }
+}
+
+// ===================== CHECKBOX =====================
+function toggleCheck(cb, name, statusId, total) {
+  cb.closest('label').classList.toggle('checked', cb.checked);
+  const checked = document.querySelectorAll(`input[name=${name}]:checked`).length;
+  const st = document.getElementById(statusId);
+  if (checked === total) {
+    st.innerHTML = `<span style="color:var(--green);font-weight:700">✅ ครบ ${total}/${total} — ผ่าน</span>`;
+  } else {
+    st.innerHTML = `<span style="color:var(--orange)">⚠️ ${checked}/${total} รายการ</span>`;
+  }
+}
+
+// ===================== LIVE VALUE BADGES =====================
+function checkVal(field) {
+  const val = parseFloat(document.getElementById(field).value);
+  const badge = document.getElementById('badge-' + field);
+  if (isNaN(val)) {
+    badge.style.background='#eee'; badge.style.color='#999';
+    badge.textContent='—'; badge.className='val-badge'; return;
+  }
+  let ok = false;
+  if (field==='ground')     { ok = val<=5;   badge.textContent=val+' Ω'; }
+  if (field==='continuity') { ok = val<0.5;  badge.textContent=val+' Ω'; }
+  if (field==='voltage')    {
+    ok = (val>=215&&val<=225)||(val>=375&&val<=385);
+    badge.textContent=val+' V';
+  }
+  badge.className = 'val-badge ' + (ok?'val-ok':'val-err');
+}
+
+// ===================== VALIDATION =====================
+function validateInspection(data) {
+  const issues = [];
+  const training = [];
+  let result = 'PASS';
+
+  function addIssue(msg, key, lvl) {
+    issues.push(msg);
+    if (TRAINING_MATRIX[key] && !training.find(t=>t.issue===key))
+      training.push({issue:key, ...TRAINING_MATRIX[key]});
+    if (lvl==='CRITICAL') result = 'CRITICAL';
+    else if (lvl==='STOP' && result!=='CRITICAL') result = 'STOP';
+    else if (lvl==='FAIL' && !['CRITICAL','STOP'].includes(result)) result = 'FAIL';
+  }
+
+  // PPE
+  if (data.ppe.length < 4)
+    addIssue(`PPE ไม่ครบ (มี ${data.ppe.length}/4 รายการ)`, 'ไม่ใส่ PPE', 'STOP');
+
+  // Ground
+  const g = parseFloat(data.ground);
+  if (!isNaN(g) && g > 5)
+    addIssue(`Ground = ${g}Ω (เกินมาตรฐาน > 5Ω)`, 'Ground เกินมาตรฐาน', 'FAIL');
+
+  // Continuity
+  const c = parseFloat(data.continuity);
+  if (!isNaN(c) && c >= 0.5)
+    addIssue(`Continuity = ${c}Ω (เกินมาตรฐาน ≥ 0.5Ω)`, 'Continuity เกินมาตรฐาน', 'FAIL');
+
+  // Voltage
+  const v = parseFloat(data.voltage);
+  if (!isNaN(v) && !((v>=215&&v<=225)||(v>=375&&v<=385)))
+    addIssue(`Voltage = ${v}V (ต้องเป็น 220V±5 หรือ 380V±5)`, 'Voltage ไม่ถูกต้อง', 'FAIL');
+
+  // Equipment
+  if (data.equipment.length < 4)
+    addIssue(`อุปกรณ์ไม่ผ่าน (ตรวจแล้ว ${data.equipment.length}/4 รายการ)`, 'อุปกรณ์ไม่ผ่าน', 'FAIL');
+
+  // Location
+  if (!MASTER_DATA[data.code_id])
+    addIssue(`Location Code "${data.code_id}" ไม่ตรง Master Data`, 'Location ไม่ตรง', 'CRITICAL');
+
+  return {result, issues, training};
+}
+
+// ===================== FORM SUBMIT =====================
+document.getElementById('inspection-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const ppe = [...document.querySelectorAll('input[name=ppe]:checked')].map(c=>c.value);
+  const equipment = [...document.querySelectorAll('input[name=equipment]:checked')].map(c=>c.value);
+  const code_id = document.getElementById('code_id').value;
+
+  if (!code_id) { alert('กรุณาเลือก Code ID'); return; }
+  if (!document.getElementById('technician').value.trim()) {
+    alert('กรุณากรอกชื่อช่าง'); return;
+  }
+
+  const data = {
+    code_id,
+    technician: document.getElementById('technician').value.trim(),
+    note: document.getElementById('note').value.trim(),
+    ground: document.getElementById('ground').value,
+    continuity: document.getElementById('continuity').value,
+    voltage: document.getElementById('voltage').value,
+    ppe, equipment,
+    date: new Date().toLocaleString('th-TH', {
+      day:'2-digit', month:'2-digit', year:'numeric',
+      hour:'2-digit', minute:'2-digit'
+    }),
+    location_name: MASTER_DATA[code_id]?.name || '—',
+    location_area: MASTER_DATA[code_id]?.area || '—',
+  };
+
+  const v = validateInspection(data);
+  data.result = v.result;
+  data.issues = v.issues;
+  data.training = v.training;
+  data.id = Date.now();
+
+  data.photos = {...photos};
+  records.unshift(data);
+  localStorage.setItem('safetyee_records', JSON.stringify(records));
+
+  showResult(data);
+  renderRecords();
+  document.getElementById('result-panel').scrollIntoView({behavior:'smooth'});
+
+  // Auto-sync to Google Sheets
+  if (sheetsConfig.auto && sheetsConfig.url) {
+    syncRecord(data).then(ok => {
+      if (ok) console.log('✅ Auto-synced to Google Sheets');
+    });
+  }
+});
+
+// ===================== SHOW RESULT =====================
+function showResult(data) {
+  const panel = document.getElementById('result-panel');
+  const box   = document.getElementById('result-box');
+  const icons = {PASS:'✅', FAIL:'❌', CRITICAL:'🚨', STOP:'🛑'};
+  const msgs  = {
+    PASS:'งานผ่านมาตรฐาน — พร้อมใช้งาน',
+    FAIL:'ต้องแก้ไขและตรวจซ้ำ',
+    CRITICAL:'งานโมฆะ หยุดใช้งานทันที',
+    STOP:'PPE ไม่ครบ — หยุดงานทันที'
+  };
+
+  box.className = 'result-box result-' + data.result;
+  document.getElementById('result-title').textContent = `${icons[data.result]} ${data.result}`;
+  document.getElementById('result-sub').textContent   = msgs[data.result];
+
+  const ic = document.getElementById('issues-container');
+  if (data.issues.length > 0) {
+    ic.innerHTML = '<div style="font-weight:700;margin-bottom:8px;color:#c00">⚠️ ปัญหาที่พบ:</div>' +
+      data.issues.map(i=>`<div class="issue-item">❌ ${i}</div>`).join('');
+  } else {
+    ic.innerHTML = '<div style="color:var(--green);font-weight:700;margin-top:10px;padding:12px;background:var(--pass);border-radius:8px">✅ ผ่านทุกหัวข้อ — ไม่พบปัญหา</div>';
+  }
+
+  const tc = document.getElementById('training-container');
+  if (data.training.length > 0) {
+    const typeClass = {'New Skill':'tc-new', 'Reskill':'tc-reskill', 'Upskill':'tc-upskill'};
+    const levelBg = {สูง:'#ffcdd2;color:#b71c1c', ปานกลาง:'#fff9c4;color:#f57f17', วิกฤต:'#ff4444;color:#fff'};
+    tc.innerHTML = '<div class="training-title">🎓 Training Auto Trigger — เรียนทันที!</div>' +
+      data.training.map(t=>`
+        <div class="training-card">
+          <div class="tc-issue">⚠️ ${t.issue}</div>
+          <div class="tc-info">
+            <span class="tc-tag ${typeClass[t.type]||''}">${t.type}</span>
+            <span class="tc-tag" style="background:${levelBg[t.level]||'#eee;color:#555'}">ความเสี่ยง: ${t.level}</span>
+            <span class="tc-tag" style="background:#e8f0fe;color:var(--blue)">📚 ${t.course}</span>
+            <span class="tc-tag" style="background:#f5f5f5;color:#555">⏱ ${t.dur}</span>
+          </div>
+        </div>`).join('');
+  } else tc.innerHTML = '';
+
+  panel.style.display = 'block';
+}
+
+// ===================== RENDER TABLE =====================
+function renderRecords() {
+  const tbody = document.getElementById('records-body');
+  document.getElementById('rec-count').textContent = records.length;
+
+  if (records.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="12" style="color:#aaa;padding:20px">ยังไม่มีข้อมูล</td></tr>';
+    updateSummary();
+    return;
+  }
+
+  tbody.innerHTML = records.map(r => {
+    const ppeOk = r.ppe.length===4;
+    const eqOk  = r.equipment.length===4;
+    const iss   = r.issues.length>0 ? r.issues.join(' / ') : '—';
+    return `<tr>
+      <td>${r.id ? records.indexOf(r)+1 : '—'}</td>
+      <td style="white-space:nowrap">${r.date}</td>
+      <td><strong>${r.code_id}</strong></td>
+      <td style="text-align:left">${r.location_name}</td>
+      <td>${r.technician}</td>
+      <td>${ppeOk?'✅':'❌'}</td>
+      <td>${r.ground||'—'}</td>
+      <td>${r.continuity||'—'}</td>
+      <td>${r.voltage||'—'}</td>
+      <td>${eqOk?'✅':'❌'}</td>
+      <td style="text-align:left;font-size:12px;max-width:180px">${iss}</td>
+      <td><span class="badge-${r.result}">${r.result}</span></td>
+    </tr>`;
+  }).join('');
+
+  updateSummary();
+}
+
+function updateSummary() {
+  const total = records.length;
+  const pass  = records.filter(r=>r.result==='PASS').length;
+  const fail  = records.filter(r=>r.result==='FAIL').length;
+  const crit  = records.filter(r=>r.result==='CRITICAL').length;
+  const stop  = records.filter(r=>r.result==='STOP').length;
+  document.getElementById('s-total').textContent = `รวม: ${total}`;
+  document.getElementById('s-pass').textContent  = `✅ PASS: ${pass}`;
+  document.getElementById('s-fail').textContent  = `❌ FAIL: ${fail}`;
+  document.getElementById('s-crit').textContent  = `🚨 CRITICAL: ${crit}`;
+  document.getElementById('s-stop').textContent  = `🛑 STOP: ${stop}`;
+}
+
+// ===================== RESET =====================
+function resetForm() {
+  document.getElementById('inspection-form').reset();
+  document.querySelectorAll('.ppe-item').forEach(l=>l.classList.remove('checked'));
+  document.getElementById('ppe-status').innerHTML='กรุณาเลือก PPE';
+  document.getElementById('eq-status').innerHTML='กรุณาตรวจสอบอุปกรณ์';
+  ['ground','continuity','voltage'].forEach(f=>{
+    const b=document.getElementById('badge-'+f);
+    b.className='val-badge';b.style.background='#eee';b.style.color='#999';b.textContent='—';
+  });
+  document.getElementById('loc-info').classList.remove('show');
+  document.getElementById('result-panel').style.display='none';
+  // Clear photos
+  photos = {};
+  document.querySelectorAll('.photo-slot').forEach(slot => {
+    slot.classList.remove('has-photo');
+    const img = slot.querySelector('img'); if (img) img.remove();
+    const input = slot.querySelector('input[type=file]'); if (input) input.value = '';
+  });
+  updatePhotoStatus();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ===================== EXPORT EXCEL =====================
+function exportExcel() {
+  if (records.length === 0) { alert('ยังไม่มีข้อมูล'); return; }
+
+  const wb = XLSX.utils.book_new();
+
+  // --- Sheet 1: Inspection Checklist ---
+  const s1Headers = [
+    'วันที่ตรวจ','Code ID','Location','พื้นที่','ช่างผู้ตรวจ',
+    'PPE ครบ?','Ground (Ω)','Continuity (Ω)','Voltage (V)',
+    'อุปกรณ์ผ่าน?','Location ถูก?','ปัญหาที่พบ','ผลการตรวจ','หมายเหตุ'
+  ];
+  const s1Data = records.map(r => [
+    r.date, r.code_id, r.location_name, r.location_area, r.technician,
+    r.ppe.length===4?'✓':'✗',
+    r.ground||'', r.continuity||'', r.voltage||'',
+    r.equipment.length===4?'✓':'✗',
+    MASTER_DATA[r.code_id]?'✓':'✗',
+    r.issues.join('; ')||'—',
+    r.result,
+    r.note||''
+  ]);
+
+  const ws1 = XLSX.utils.aoa_to_sheet([s1Headers, ...s1Data]);
+  ws1['!cols'] = [16,10,18,14,16,8,10,12,10,10,10,40,12,20].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws1, 'Inspection Checklist');
+
+  // --- Sheet 2: Training Matrix ---
+  const trainingMap = {};
+  records.forEach(r => {
+    r.training.forEach(t => {
+      if (!trainingMap[t.issue]) trainingMap[t.issue] = {...t, count:0, techs:[]};
+      trainingMap[t.issue].count++;
+      if (!trainingMap[t.issue].techs.includes(r.technician))
+        trainingMap[t.issue].techs.push(r.technician);
+    });
+  });
+
+  const s2Headers = ['ปัญหาที่พบ','ระดับความเสี่ยง','หลักสูตร','ประเภท','ระยะเวลา','จำนวน Trigger','ช่างที่ต้องเรียน'];
+  const s2Data = Object.values(trainingMap).map(t => [
+    t.issue, t.level, t.course, t.type, t.dur, t.count, t.techs.join(', ')
+  ]);
+  if (s2Data.length === 0) {
+    s2Data.push(['ไม่มีการ Trigger Training','—','—','—','—',0,'—']);
+  }
+
+  const ws2 = XLSX.utils.aoa_to_sheet([s2Headers, ...s2Data]);
+  ws2['!cols'] = [28,14,26,12,12,12,30].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws2, 'Training Matrix');
+
+  // --- Sheet 3: Summary ---
+  const total = records.length;
+  const pass  = records.filter(r=>r.result==='PASS').length;
+  const fail  = records.filter(r=>r.result==='FAIL').length;
+  const crit  = records.filter(r=>r.result==='CRITICAL').length;
+  const stop  = records.filter(r=>r.result==='STOP').length;
+  const s3Data = [
+    ['SAFETY-EE SYSTEM — สรุปผล'],
+    ['วันที่ Export:', new Date().toLocaleString('th-TH')],
+    [''],
+    ['ผลการตรวจ','จำนวน','%'],
+    ['✅ PASS',   pass,  total?Math.round(pass/total*100)+'%':'—'],
+    ['❌ FAIL',   fail,  total?Math.round(fail/total*100)+'%':'—'],
+    ['🚨 CRITICAL',crit, total?Math.round(crit/total*100)+'%':'—'],
+    ['🛑 STOP',   stop,  total?Math.round(stop/total*100)+'%':'—'],
+    ['รวมทั้งหมด',total,'100%'],
+  ];
+  const ws3 = XLSX.utils.aoa_to_sheet(s3Data);
+  ws3['!cols'] = [{wch:20},{wch:10},{wch:8}];
+  XLSX.utils.book_append_sheet(wb, ws3, 'Summary');
+
+  const date = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  XLSX.writeFile(wb, `SAFETY_EE_Report_${date}.xlsx`);
+}
+</script>
+</body>
+</html>
