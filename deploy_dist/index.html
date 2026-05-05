@@ -12,6 +12,7 @@
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" href="icon.svg">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
   --blue:#1F4E79; --green:#1a7a3b; --red:#c00000;
@@ -197,6 +198,49 @@ footer{text-align:center;padding:20px;font-size:12px;color:#888;
   font-family:'Consolas',monospace;font-size:11px;overflow-x:auto;
   white-space:pre;margin:8px 0;max-height:200px;overflow-y:auto}
 .step-photo .card-header{background:#fff8e1;color:#f57c00}
+
+/* ===== View Tabs ===== */
+.view-tabs{display:flex;gap:4px;margin:18px 0 8px;border-bottom:2px solid var(--border);padding:0 4px}
+.view-tab{padding:10px 22px;border:none;background:transparent;font-size:14px;font-weight:700;
+  cursor:pointer;color:#888;border-bottom:3px solid transparent;margin-bottom:-2px;
+  transition:all .2s;font-family:inherit}
+.view-tab:hover{color:var(--blue)}
+.view-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+
+/* ===== Dashboard ===== */
+.dash-header{display:flex;justify-content:space-between;align-items:flex-end;
+  flex-wrap:wrap;gap:12px;margin:20px 0 16px;padding:16px 20px;
+  background:linear-gradient(135deg,#fff,#f0f4f8);border-radius:12px;
+  border:1px solid var(--border)}
+.dash-select{padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;
+  font-size:13px;font-weight:600;background:#fff;cursor:pointer;font-family:inherit}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:12px;margin-bottom:20px}
+.kpi-card{background:#fff;border-radius:12px;padding:16px 18px;
+  border-left:5px solid var(--c,#1F4E79);box-shadow:0 2px 8px #0001;
+  transition:transform .2s}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:0 4px 14px #0002}
+.kpi-label{font-size:12px;color:#666;font-weight:600;margin-bottom:6px}
+.kpi-value{font-size:32px;font-weight:900;color:var(--c,var(--blue));line-height:1}
+.kpi-sub{font-size:11px;color:#888;margin-top:4px}
+
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+@media(max-width:800px){.chart-grid{grid-template-columns:1fr}}
+.chart-card{background:#fff;border-radius:12px;padding:18px;border:1px solid var(--border);
+  box-shadow:0 2px 8px #0001}
+.chart-title{font-size:14px;font-weight:700;color:var(--blue);margin-bottom:12px}
+.chart-wrap{position:relative;height:260px}
+
+.mini-table{font-size:13px;max-height:260px;overflow-y:auto}
+.mini-table table{width:100%;border-collapse:collapse}
+.mini-table th{background:#f5f7fa;color:#444;padding:8px 10px;text-align:left;
+  font-weight:700;font-size:12px;border-bottom:2px solid var(--border);
+  position:sticky;top:0}
+.mini-table td{padding:8px 10px;border-bottom:1px solid #eee}
+.mini-table tr:hover td{background:#f9fafc}
+.mini-bar{display:inline-block;height:14px;background:linear-gradient(90deg,var(--blue),#2e6db4);
+  border-radius:3px;vertical-align:middle;margin-right:6px;min-width:4px}
 </style>
 </head>
 <body>
@@ -218,6 +262,13 @@ footer{text-align:center;padding:20px;font-size:12px;color:#888;
 
 <div class="container">
 
+  <!-- View tabs -->
+  <div class="view-tabs">
+    <button class="view-tab active" data-view="form" onclick="switchView('form')">📝 ฟอร์มตรวจ</button>
+    <button class="view-tab" data-view="dashboard" onclick="switchView('dashboard')">📊 Dashboard</button>
+  </div>
+
+  <div id="view-form">
   <div class="rules-bar">
     <span style="font-weight:700;margin-right:4px">📋 กฎ:</span>
     <span class="rule-tag">🚫 ไม่มีรูป = ไม่ตรวจ</span>
@@ -683,6 +734,93 @@ function doGet() {
     </div>
   </div>
 
+  </div><!-- end view-form -->
+
+  <!-- ===================== DASHBOARD VIEW ===================== -->
+  <div id="view-dashboard" style="display:none">
+    <div class="dash-header">
+      <div>
+        <h2 style="margin:0;color:var(--blue);font-size:22px">📊 Dashboard ภาพรวม</h2>
+        <div style="font-size:13px;color:#666;margin-top:4px" id="dash-period">ทุกข้อมูล</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select id="dash-filter" onchange="renderDashboard()" class="dash-select">
+          <option value="all">📅 ทั้งหมด</option>
+          <option value="today">วันนี้</option>
+          <option value="week">7 วันที่ผ่านมา</option>
+          <option value="month">30 วันที่ผ่านมา</option>
+        </select>
+        <button class="btn-mini" onclick="renderDashboard()" style="padding:8px 14px">🔄 Refresh</button>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card" style="--c:#1F4E79">
+        <div class="kpi-label">รวมการตรวจ</div>
+        <div class="kpi-value" id="kpi-total">0</div>
+        <div class="kpi-sub">รายการ</div>
+      </div>
+      <div class="kpi-card" style="--c:#1a7a3b">
+        <div class="kpi-label">✅ ผ่าน</div>
+        <div class="kpi-value" id="kpi-pass">0</div>
+        <div class="kpi-sub" id="kpi-pass-pct">0%</div>
+      </div>
+      <div class="kpi-card" style="--c:#c00000">
+        <div class="kpi-label">❌ Fail + Critical</div>
+        <div class="kpi-value" id="kpi-fail">0</div>
+        <div class="kpi-sub" id="kpi-fail-pct">0%</div>
+      </div>
+      <div class="kpi-card" style="--c:#e06c00">
+        <div class="kpi-label">🛑 หยุดงาน</div>
+        <div class="kpi-value" id="kpi-stop">0</div>
+        <div class="kpi-sub" id="kpi-stop-pct">0%</div>
+      </div>
+      <div class="kpi-card" style="--c:#7030A0">
+        <div class="kpi-label">🎓 Training Triggered</div>
+        <div class="kpi-value" id="kpi-training">0</div>
+        <div class="kpi-sub">หลักสูตร</div>
+      </div>
+      <div class="kpi-card" style="--c:#0288d1">
+        <div class="kpi-label">📍 Location ที่ตรวจ</div>
+        <div class="kpi-value" id="kpi-locations">0</div>
+        <div class="kpi-sub">จุด</div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">📈 ผลการตรวจ</div>
+        <div class="chart-wrap"><canvas id="chart-result"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">📅 จำนวนการตรวจรายวัน (30 วัน)</div>
+        <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">⚠️ ปัญหาที่พบบ่อย (Top 5)</div>
+        <div class="chart-wrap"><canvas id="chart-issues"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">👷 ช่างที่ตรวจมากสุด (Top 5)</div>
+        <div class="chart-wrap"><canvas id="chart-tech"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">📍 Top Location ที่มีปัญหา</div>
+        <div id="loc-issues-table" class="mini-table"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🎓 Training Matrix Status</div>
+        <div id="training-status-table" class="mini-table"></div>
+      </div>
+    </div>
+  </div><!-- end view-dashboard -->
+
 </div>
 
 <footer>
@@ -1011,6 +1149,257 @@ async function syncAllToSheets() {
     if (success) ok++;
   }
   showSheetsStatus(`✅ Sync เสร็จ ${ok}/${records.length} รายการ`, 'ok');
+}
+
+// ===================== DASHBOARD =====================
+const chartInstances = {};
+
+function switchView(view) {
+  document.querySelectorAll('.view-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.view === view));
+  document.getElementById('view-form').style.display = view === 'form' ? 'block' : 'none';
+  document.getElementById('view-dashboard').style.display = view === 'dashboard' ? 'block' : 'none';
+  if (view === 'dashboard') renderDashboard();
+}
+
+function filterByPeriod(recs, period) {
+  if (period === 'all') return recs;
+  const now = new Date();
+  const days = period === 'today' ? 1 : period === 'week' ? 7 : 30;
+  const cutoff = now.getTime() - days * 86400000;
+  return recs.filter(r => {
+    const parts = r.date.split(/[\s/:]/);
+    if (parts.length < 3) return true;
+    const d = new Date(+parts[2] - 543, +parts[1]-1, +parts[0],
+                       +(parts[3]||0), +(parts[4]||0));
+    return d.getTime() >= cutoff;
+  });
+}
+
+function renderDashboard() {
+  const period = document.getElementById('dash-filter').value;
+  const data = filterByPeriod(records, period);
+  const periodLabel = {all:'ทุกข้อมูล',today:'วันนี้',week:'7 วันที่ผ่านมา',month:'30 วันที่ผ่านมา'}[period];
+  document.getElementById('dash-period').textContent = `${periodLabel} • ${data.length} รายการ`;
+
+  // KPIs
+  const total = data.length;
+  const pass = data.filter(r=>r.result==='PASS').length;
+  const failCrit = data.filter(r=>r.result==='FAIL'||r.result==='CRITICAL').length;
+  const stop = data.filter(r=>r.result==='STOP').length;
+  const trainingCount = data.reduce((s,r)=>s + (r.training?.length||0), 0);
+  const locations = new Set(data.map(r=>r.code_id)).size;
+  const pct = (n) => total > 0 ? Math.round(n/total*100) + '%' : '0%';
+
+  document.getElementById('kpi-total').textContent = total;
+  document.getElementById('kpi-pass').textContent = pass;
+  document.getElementById('kpi-pass-pct').textContent = pct(pass);
+  document.getElementById('kpi-fail').textContent = failCrit;
+  document.getElementById('kpi-fail-pct').textContent = pct(failCrit);
+  document.getElementById('kpi-stop').textContent = stop;
+  document.getElementById('kpi-stop-pct').textContent = pct(stop);
+  document.getElementById('kpi-training').textContent = trainingCount;
+  document.getElementById('kpi-locations').textContent = locations;
+
+  drawResultChart(data);
+  drawTrendChart(data);
+  drawIssuesChart(data);
+  drawTechChart(data);
+  drawLocationTable(data);
+  drawTrainingTable(data);
+}
+
+function destroyChart(id) {
+  if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
+}
+
+function drawResultChart(data) {
+  destroyChart('result');
+  const counts = {PASS:0, FAIL:0, CRITICAL:0, STOP:0};
+  data.forEach(r => counts[r.result]++);
+  const ctx = document.getElementById('chart-result');
+  chartInstances.result = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['✅ PASS','❌ FAIL','🚨 CRITICAL','🛑 STOP'],
+      datasets: [{
+        data: [counts.PASS, counts.FAIL, counts.CRITICAL, counts.STOP],
+        backgroundColor: ['#1a7a3b','#c00000','#ff4444','#e06c00'],
+        borderWidth: 2,
+        borderColor: '#fff'
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { font: { size: 12 } } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+              const pct = total > 0 ? Math.round(ctx.parsed/total*100) : 0;
+              return `${ctx.label}: ${ctx.parsed} (${pct}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+function drawTrendChart(data) {
+  destroyChart('trend');
+  const days = 30;
+  const labels = [], counts = [], failCounts = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000);
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    labels.push(`${dd}/${mm}`);
+    const dayRecs = data.filter(r => {
+      const parts = r.date.split(/[\s/:]/);
+      return parts[0] === dd && parts[1] === mm;
+    });
+    counts.push(dayRecs.length);
+    failCounts.push(dayRecs.filter(r=>r.result!=='PASS').length);
+  }
+  const ctx = document.getElementById('chart-trend');
+  chartInstances.trend = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {label:'ผ่าน', data: counts.map((c,i)=>c-failCounts[i]), backgroundColor:'#1a7a3b'},
+        {label:'ไม่ผ่าน', data: failCounts, backgroundColor:'#c00000'}
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top' } },
+      scales: {
+        x: { stacked: true, ticks: { font: { size: 10 } } },
+        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }
+      }
+    }
+  });
+}
+
+function drawIssuesChart(data) {
+  destroyChart('issues');
+  const issueCount = {};
+  data.forEach(r => (r.training||[]).forEach(t => {
+    issueCount[t.issue] = (issueCount[t.issue]||0) + 1;
+  }));
+  const sorted = Object.entries(issueCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const ctx = document.getElementById('chart-issues');
+  if (sorted.length === 0) {
+    ctx.parentElement.innerHTML = '<div style="text-align:center;color:#aaa;padding:60px">ไม่พบปัญหา 🎉</div>';
+    return;
+  }
+  chartInstances.issues = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(s=>s[0]),
+      datasets: [{
+        label: 'จำนวนครั้ง',
+        data: sorted.map(s=>s[1]),
+        backgroundColor: ['#c00000','#e06c00','#ffc000','#7030A0','#0288d1']
+      }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+  });
+}
+
+function drawTechChart(data) {
+  destroyChart('tech');
+  const techCount = {};
+  data.forEach(r => {
+    const t = r.technician || '—';
+    techCount[t] = (techCount[t]||0) + 1;
+  });
+  const sorted = Object.entries(techCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const ctx = document.getElementById('chart-tech');
+  if (sorted.length === 0) {
+    ctx.parentElement.innerHTML = '<div style="text-align:center;color:#aaa;padding:60px">ยังไม่มีข้อมูล</div>';
+    return;
+  }
+  chartInstances.tech = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(s=>s[0]),
+      datasets: [{
+        label: 'จำนวนการตรวจ',
+        data: sorted.map(s=>s[1]),
+        backgroundColor: '#1F4E79'
+      }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+  });
+}
+
+function drawLocationTable(data) {
+  const stats = {};
+  data.forEach(r => {
+    const k = r.code_id;
+    if (!stats[k]) stats[k] = {name:r.location_name||'—', total:0, fail:0};
+    stats[k].total++;
+    if (r.result !== 'PASS') stats[k].fail++;
+  });
+  const sorted = Object.entries(stats)
+    .filter(([,s])=>s.fail>0)
+    .sort((a,b)=>b[1].fail-a[1].fail).slice(0,8);
+
+  const el = document.getElementById('loc-issues-table');
+  if (sorted.length === 0) {
+    el.innerHTML = '<div style="text-align:center;color:#aaa;padding:40px">✅ ทุก Location ผ่านหมด</div>';
+    return;
+  }
+  const max = sorted[0][1].fail;
+  el.innerHTML = `<table>
+    <thead><tr><th>Code</th><th>สถานที่</th><th>ปัญหา/รวม</th><th>%</th></tr></thead>
+    <tbody>${sorted.map(([code,s])=>{
+      const pct = Math.round(s.fail/s.total*100);
+      const w = Math.round(s.fail/max*100);
+      return `<tr>
+        <td><strong>${code}</strong></td>
+        <td>${s.name}</td>
+        <td><span class="mini-bar" style="width:${w}px"></span>${s.fail}/${s.total}</td>
+        <td><strong style="color:${pct>50?'#c00':'#e06c00'}">${pct}%</strong></td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+function drawTrainingTable(data) {
+  const matrix = {};
+  data.forEach(r => (r.training||[]).forEach(t => {
+    if (!matrix[t.issue]) matrix[t.issue] = {...t, count:0, techs:new Set()};
+    matrix[t.issue].count++;
+    matrix[t.issue].techs.add(r.technician);
+  }));
+  const sorted = Object.values(matrix).sort((a,b)=>b.count-a.count);
+  const el = document.getElementById('training-status-table');
+  if (sorted.length === 0) {
+    el.innerHTML = '<div style="text-align:center;color:#aaa;padding:40px">✅ ไม่มีการ Trigger Training</div>';
+    return;
+  }
+  const lvlBg = {สูง:'#ffcdd2', ปานกลาง:'#fff9c4', วิกฤต:'#ff4444', ต่ำ:'#c6efce'};
+  const typeBg = {'New Skill':'#ff6b6b','Reskill':'#ffa726','Upskill':'#42a5f5'};
+  el.innerHTML = `<table>
+    <thead><tr><th>หลักสูตร</th><th>ระดับ</th><th>ประเภท</th><th>ช่าง</th></tr></thead>
+    <tbody>${sorted.map(t=>`<tr>
+      <td><strong>${t.course}</strong><br><small style="color:#888">${t.issue}</small></td>
+      <td><span style="background:${lvlBg[t.level]||'#eee'};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">${t.level}</span></td>
+      <td><span style="background:${typeBg[t.type]||'#eee'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">${t.type}</span></td>
+      <td><strong>${t.techs.size}</strong> คน</td>
+    </tr>`).join('')}</tbody></table>`;
 }
 
 function copyAppsScript() {
