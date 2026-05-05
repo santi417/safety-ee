@@ -497,7 +497,10 @@ footer{text-align:center;padding:20px;font-size:12px;color:#888;
           <li>กด "Test Connect" เพื่อทดสอบ</li>
         </ol>
         <div style="margin-top:10px;font-weight:700;color:var(--blue)">📋 Apps Script Code:</div>
-        <div class="code-block" id="apps-script-code">// วางโค้ดนี้ใน Apps Script
+        <div class="code-block" id="apps-script-code">// SAFETY-EE Apps Script v2 — Sheets + Drive + Email Alert
+const ALERT_EMAIL = 'santi@planbmedia.co.th'; // เปลี่ยนได้
+const ALERT_ON = ['CRITICAL'];                 // เพิ่ม 'STOP','FAIL' ได้
+
 function doPost(e) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -520,6 +523,7 @@ function doPost(e) {
 
     // Upload photos to Drive
     const photoLinks = [];
+    const photoUrls = {};
     if (data.photos) {
       const folder = getOrCreateFolder('SAFETY-EE Photos');
       Object.entries(data.photos).forEach(([key, b64]) => {
@@ -531,6 +535,7 @@ function doPost(e) {
         const file = folder.createFile(blob);
         file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
         photoLinks.push(`${key}: ${file.getUrl()}`);
+        photoUrls[key] = file.getUrl();
       });
     }
 
@@ -544,6 +549,11 @@ function doPost(e) {
       photoLinks.join('\n'), data.note||''
     ]);
 
+    // Email alert
+    if (ALERT_ON.indexOf(data.result) !== -1) {
+      sendAlertEmail(data, photoUrls);
+    }
+
     return ContentService.createTextOutput(JSON.stringify({ok:true,id:data.id}))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
@@ -552,13 +562,79 @@ function doPost(e) {
   }
 }
 
+function sendAlertEmail(data, photoUrls) {
+  const color = data.result === 'CRITICAL' ? '#c00' :
+                data.result === 'STOP' ? '#e06c00' : '#d32f2f';
+  const icon  = data.result === 'CRITICAL' ? '🚨' :
+                data.result === 'STOP' ? '🛑' : '❌';
+
+  const photoHtml = Object.entries(photoUrls).map(([k,u]) =>
+    `<a href="${u}" style="display:inline-block;margin:4px;padding:6px 12px;
+      background:#1F4E79;color:#fff;text-decoration:none;border-radius:6px;
+      font-size:12px">📷 ${k.replace('photo_','')}</a>`).join('');
+
+  const issuesHtml = data.issues.map(i =>
+    `<li style="margin:4px 0;color:#c00">${i}</li>`).join('');
+
+  const html = `
+  <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;
+    border:3px solid ${color};border-radius:12px;overflow:hidden">
+    <div style="background:${color};color:#fff;padding:20px;text-align:center">
+      <div style="font-size:48px;font-weight:900">${icon} ${data.result}</div>
+      <div style="font-size:14px;margin-top:6px;opacity:.9">SAFETY-EE Alert</div>
+    </div>
+    <div style="padding:20px;background:#fff">
+      <table style="width:100%;font-size:14px;border-collapse:collapse">
+        <tr><td style="padding:6px 0;color:#666;width:120px">วันที่:</td>
+            <td style="padding:6px 0;font-weight:600">${data.date}</td></tr>
+        <tr><td style="padding:6px 0;color:#666">Code ID:</td>
+            <td style="padding:6px 0;font-weight:600">${data.code_id}</td></tr>
+        <tr><td style="padding:6px 0;color:#666">Location:</td>
+            <td style="padding:6px 0;font-weight:600">${data.location_name||'—'}</td></tr>
+        <tr><td style="padding:6px 0;color:#666">พื้นที่:</td>
+            <td style="padding:6px 0">${data.location_area||'—'}</td></tr>
+        <tr><td style="padding:6px 0;color:#666">ช่าง:</td>
+            <td style="padding:6px 0;font-weight:600">${data.technician}</td></tr>
+        <tr><td style="padding:6px 0;color:#666">Ground:</td>
+            <td style="padding:6px 0">${data.ground} Ω</td></tr>
+        <tr><td style="padding:6px 0;color:#666">Continuity:</td>
+            <td style="padding:6px 0">${data.continuity} Ω</td></tr>
+        <tr><td style="padding:6px 0;color:#666">Voltage:</td>
+            <td style="padding:6px 0">${data.voltage} V</td></tr>
+      </table>
+      <div style="margin-top:16px;padding:12px;background:#fff5f5;
+        border-left:4px solid ${color};border-radius:4px">
+        <div style="font-weight:700;color:${color};margin-bottom:8px">⚠️ ปัญหาที่พบ</div>
+        <ul style="margin:0;padding-left:20px;font-size:13px">${issuesHtml}</ul>
+      </div>
+      ${photoHtml ? `<div style="margin-top:16px">
+        <div style="font-weight:700;margin-bottom:8px">📷 รูปหลักฐาน</div>
+        ${photoHtml}</div>` : ''}
+      <div style="margin-top:20px;padding:12px;background:#fff3cd;
+        border-radius:6px;font-size:12px;color:#666">
+        ⚡ <strong>Action Required:</strong> กรุณาตรวจสอบและแก้ไขโดยด่วน
+      </div>
+    </div>
+    <div style="padding:12px;background:#f5f7fa;text-align:center;
+      font-size:11px;color:#888">
+      SAFETY-EE SYSTEM | Plan B Media Standard
+    </div>
+  </div>`;
+
+  MailApp.sendEmail({
+    to: ALERT_EMAIL,
+    subject: `${icon} [${data.result}] ${data.code_id} ${data.location_name||''} — ${data.technician}`,
+    htmlBody: html
+  });
+}
+
 function getOrCreateFolder(name) {
   const folders = DriveApp.getFoldersByName(name);
   return folders.hasNext() ? folders.next() : DriveApp.createFolder(name);
 }
 
 function doGet() {
-  return ContentService.createTextOutput('SAFETY-EE Endpoint Active');
+  return ContentService.createTextOutput('SAFETY-EE Endpoint Active v2');
 }</div>
         <button class="btn-mini" onclick="copyAppsScript()" style="margin-top:6px">📋 Copy Code</button>
       </details>
