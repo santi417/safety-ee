@@ -241,6 +241,13 @@ footer{text-align:center;padding:20px;font-size:12px;color:#888;
 .mini-table tr:hover td{background:#f9fafc}
 .mini-bar{display:inline-block;height:14px;background:linear-gradient(90deg,var(--blue),#2e6db4);
   border-radius:3px;vertical-align:middle;margin-right:6px;min-width:4px}
+
+/* Code ID input mode toggle */
+.code-mode-btn{padding:3px 10px;font-size:11px;font-weight:700;background:#fff;
+  color:#888;border:none;cursor:pointer;font-family:inherit;transition:all .2s}
+.code-mode-btn:not(:last-child){border-right:1px solid var(--border)}
+.code-mode-btn.active{background:var(--blue);color:#fff}
+.code-mode-btn:hover:not(.active){background:#f0f4f8;color:var(--blue)}
 </style>
 </head>
 <body>
@@ -292,10 +299,25 @@ footer{text-align:center;padding:20px;font-size:12px;color:#888;
         </div>
         <div class="card-body">
           <div class="form-row">
-            <label class="form-label">รหัสป้าย (Code ID) *</label>
+            <label class="form-label">
+              รหัสป้าย (Code ID) *
+              <span style="float:right;display:inline-flex;gap:0;border-radius:6px;
+                overflow:hidden;border:1px solid var(--border)">
+                <button type="button" id="mode-dropdown" class="code-mode-btn active"
+                  onclick="setCodeInputMode('dropdown')">🔽 Dropdown</button>
+                <button type="button" id="mode-text" class="code-mode-btn"
+                  onclick="setCodeInputMode('text')">✏️ พิมพ์เอง</button>
+              </span>
+            </label>
             <select id="code_id" required onchange="checkLocation()">
               <option value="">-- เลือก Code ID --</option>
             </select>
+            <input type="text" id="code_id_text" list="code_id_list"
+              placeholder="พิมพ์ Code ID เช่น A, EXAT06, PE112"
+              oninput="onCodeTextInput()" autocomplete="off"
+              style="display:none;width:100%;padding:10px 12px;border:1.5px solid var(--border);
+              border-radius:8px;font-size:14px;font-family:inherit">
+            <datalist id="code_id_list"></datalist>
             <div class="loc-info" id="loc-info"></div>
           </div>
           <div class="form-row">
@@ -1065,14 +1087,16 @@ const DEFAULT_MASTER = {
 };
 
 let MASTER_DATA = JSON.parse(localStorage.getItem('safetyee_master')) || {};
-// Migration: merge new default entries that user doesn't have yet
-const MASTER_VERSION = 3;
+// Migration: on version bump, REPLACE with new defaults (clean state)
+// Custom entries marked with __custom flag are preserved
+const MASTER_VERSION = 4;
 const savedVer = parseInt(localStorage.getItem('safetyee_master_v') || '0');
 if (savedVer < MASTER_VERSION || Object.keys(MASTER_DATA).length === 0) {
-  // Merge defaults — keep user's custom entries
-  Object.entries(DEFAULT_MASTER).forEach(([k,v]) => {
-    if (!MASTER_DATA[k]) MASTER_DATA[k] = v;
+  const customEntries = {};
+  Object.entries(MASTER_DATA).forEach(([k,v]) => {
+    if (v && v.__custom) customEntries[k] = v;
   });
+  MASTER_DATA = {...DEFAULT_MASTER, ...customEntries};
   localStorage.setItem('safetyee_master_v', MASTER_VERSION);
   localStorage.setItem('safetyee_master', JSON.stringify(MASTER_DATA));
 }
@@ -1143,13 +1167,54 @@ function rebuildCodeDropdown() {
   const sel = document.getElementById('code_id');
   const cur = sel.value;
   sel.innerHTML = '<option value="">-- เลือก Code ID --</option>';
+  const dl = document.getElementById('code_id_list');
+  if (dl) dl.innerHTML = '';
   Object.entries(MASTER_DATA).forEach(([code, info]) => {
     const opt = document.createElement('option');
     opt.value = code;
     opt.textContent = `${code} — ${info.name}`;
     sel.appendChild(opt);
+    if (dl) {
+      const dopt = document.createElement('option');
+      dopt.value = code;
+      dopt.textContent = info.name;
+      dl.appendChild(dopt);
+    }
   });
   sel.value = cur;
+}
+
+function setCodeInputMode(mode) {
+  const sel = document.getElementById('code_id');
+  const txt = document.getElementById('code_id_text');
+  const btnD = document.getElementById('mode-dropdown');
+  const btnT = document.getElementById('mode-text');
+  if (mode === 'dropdown') {
+    sel.style.display = '';
+    txt.style.display = 'none';
+    sel.required = true;
+    txt.required = false;
+    btnD.classList.add('active'); btnT.classList.remove('active');
+    if (txt.value && !sel.value) sel.value = txt.value;
+  } else {
+    sel.style.display = 'none';
+    txt.style.display = '';
+    sel.required = false;
+    txt.required = true;
+    btnD.classList.remove('active'); btnT.classList.add('active');
+    if (sel.value && !txt.value) txt.value = sel.value;
+  }
+  checkLocation();
+}
+
+function getCurrentCodeId() {
+  const txt = document.getElementById('code_id_text');
+  if (txt && txt.style.display !== 'none' && txt.value.trim()) return txt.value.trim();
+  return document.getElementById('code_id').value;
+}
+
+function onCodeTextInput() {
+  checkLocation();
 }
 
 (function init() {
@@ -1250,11 +1315,13 @@ function saveMasterFromUI() {
   document.querySelectorAll('#master-list .master-row').forEach(row => {
     const code = row.querySelector('.m-code').value.trim();
     if (!code) return;
+    const isDefault = !!DEFAULT_MASTER[code];
     newData[code] = {
       name: row.querySelector('.m-name').value.trim(),
       area: row.querySelector('.m-area').value.trim(),
       size: row.querySelector('.m-size').value.trim(),
-      type: 'ป้ายโฆษณา'
+      type: 'ป้ายโฆษณา',
+      __custom: !isDefault  // mark non-default entries so migration preserves them
     };
   });
   MASTER_DATA = newData;
@@ -1626,12 +1693,19 @@ function copyAppsScript() {
 
 // ===================== LOCATION =====================
 function checkLocation() {
-  const code = document.getElementById('code_id').value;
+  const code = getCurrentCodeId();
   const info = MASTER_DATA[code];
   const div = document.getElementById('loc-info');
   if (info) {
     div.innerHTML = `📍 <strong>${info.name}</strong> | ${info.area} | ${info.type}`;
     div.classList.add('show');
+    div.style.background = '';
+    div.style.color = '';
+  } else if (code) {
+    div.innerHTML = `⚠️ Code ID "<strong>${code}</strong>" ไม่อยู่ใน Master Data → จะได้ผล CRITICAL`;
+    div.classList.add('show');
+    div.style.background = '#fff3cd';
+    div.style.color = '#856404';
   } else {
     div.classList.remove('show');
   }
@@ -1717,9 +1791,9 @@ document.getElementById('inspection-form').addEventListener('submit', function(e
   e.preventDefault();
   const ppe = [...document.querySelectorAll('input[name=ppe]:checked')].map(c=>c.value);
   const equipment = [...document.querySelectorAll('input[name=equipment]:checked')].map(c=>c.value);
-  const code_id = document.getElementById('code_id').value;
+  const code_id = getCurrentCodeId();
 
-  if (!code_id) { alert('กรุณาเลือก Code ID'); return; }
+  if (!code_id) { alert('กรุณาเลือก Code ID หรือพิมพ์ Code ID'); return; }
   if (!document.getElementById('technician').value.trim()) {
     alert('กรุณากรอกชื่อช่าง'); return;
   }
@@ -1856,6 +1930,7 @@ function updateSummary() {
 // ===================== RESET =====================
 function resetForm() {
   document.getElementById('inspection-form').reset();
+  document.getElementById('code_id_text').value = '';
   document.querySelectorAll('.ppe-item').forEach(l=>l.classList.remove('checked'));
   document.getElementById('ppe-status').innerHTML='กรุณาเลือก PPE';
   document.getElementById('eq-status').innerHTML='กรุณาตรวจสอบอุปกรณ์';
