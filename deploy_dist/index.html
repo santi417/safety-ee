@@ -243,11 +243,24 @@ footer{text-align:center;padding:20px;font-size:12px;color:#888;
   border-radius:3px;vertical-align:middle;margin-right:6px;min-width:4px}
 
 /* Code ID input mode toggle */
-.code-mode-btn{padding:3px 10px;font-size:11px;font-weight:700;background:#fff;
-  color:#888;border:none;cursor:pointer;font-family:inherit;transition:all .2s}
-.code-mode-btn:not(:last-child){border-right:1px solid var(--border)}
+.code-mode-toggle{display:flex;gap:0;margin-bottom:8px;border-radius:8px;
+  overflow:hidden;border:1.5px solid var(--blue);background:#fff;width:100%}
+.code-mode-btn{flex:1;padding:9px 12px;font-size:13px;font-weight:700;background:#fff;
+  color:var(--blue);border:none;cursor:pointer;font-family:inherit;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:4px}
+.code-mode-btn:not(:last-child){border-right:1.5px solid var(--blue)}
 .code-mode-btn.active{background:var(--blue);color:#fff}
-.code-mode-btn:hover:not(.active){background:#f0f4f8;color:var(--blue)}
+.code-mode-btn:hover:not(.active){background:#e8f0fe}
+
+/* Make loc-info more prominent */
+.loc-info.show{padding:12px 14px;font-size:14px;line-height:1.7}
+.loc-info.show > div{font-size:14px}
+
+/* Mobile responsive — stack mode buttons full width */
+@media(max-width:600px){
+  .code-mode-btn{font-size:12px;padding:10px 8px}
+  .loc-info.show{font-size:13px;padding:10px 12px}
+}
 </style>
 </head>
 <body>
@@ -299,16 +312,13 @@ footer{text-align:center;padding:20px;font-size:12px;color:#888;
         </div>
         <div class="card-body">
           <div class="form-row">
-            <label class="form-label">
-              รหัสป้าย (Code ID) *
-              <span style="float:right;display:inline-flex;gap:0;border-radius:6px;
-                overflow:hidden;border:1px solid var(--border)">
-                <button type="button" id="mode-dropdown" class="code-mode-btn active"
-                  onclick="setCodeInputMode('dropdown')">🔽 Dropdown</button>
-                <button type="button" id="mode-text" class="code-mode-btn"
-                  onclick="setCodeInputMode('text')">✏️ พิมพ์เอง</button>
-              </span>
-            </label>
+            <label class="form-label">รหัสป้าย (Code ID) *</label>
+            <div class="code-mode-toggle">
+              <button type="button" id="mode-dropdown" class="code-mode-btn active"
+                onclick="setCodeInputMode('dropdown')">🔽 เลือกจากรายการ</button>
+              <button type="button" id="mode-text" class="code-mode-btn"
+                onclick="setCodeInputMode('text')">✏️ พิมพ์เอง</button>
+            </div>
             <select id="code_id" required onchange="checkLocation()">
               <option value="">-- เลือก Code ID --</option>
             </select>
@@ -1738,15 +1748,21 @@ function checkLocation() {
   if (info) {
     const gps = (info.lat && info.lng)
       ? `<a href="https://www.google.com/maps?q=${info.lat},${info.lng}" target="_blank"
-          style="color:#1565c0;text-decoration:none;font-size:12px;margin-left:6px">
+          style="display:inline-block;background:#1565c0;color:#fff;padding:4px 10px;
+          border-radius:6px;font-size:12px;text-decoration:none;font-weight:700">
           🗺️ เปิดแผนที่</a>`
       : '';
     div.innerHTML = `
-      <div style="display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;line-height:1.6">
-        <span>📍 <strong>${info.name}</strong></span>
-        ${mediaTypeBadge(info.type)}
-        <span style="color:#666;font-size:13px">${info.area || ''}</span>
-        ${gps}
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <strong style="font-size:14px;color:#1F4E79">📍 ${info.name}</strong>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="color:#666;font-size:12px">ประเภท:</span>
+          ${mediaTypeBadge(info.type)}
+        </div>
+        ${info.area ? `<div style="color:#666;font-size:12px">📌 ${info.area}</div>` : ''}
+        ${gps ? `<div>${gps}</div>` : ''}
       </div>`;
     div.classList.add('show');
     div.style.background = '';
