@@ -10,3 +10,11 @@ Thumbs.db
 
 # Local Netlify folder
 .netlify
+
+# Build/temp files
+node_modules/
+package-lock.json
+read_master.js
+inject_master.js
+master_data.json
+*.xlsx
