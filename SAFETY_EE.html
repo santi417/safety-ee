@@ -185,7 +185,7 @@ footer{text-align:center;padding:20px;font-size:12px;color:#888;
 .modal-title{font-size:18px;font-weight:700;color:var(--blue);margin-bottom:16px;
   display:flex;justify-content:space-between;align-items:center}
 .modal-close{background:none;border:none;font-size:24px;cursor:pointer;color:#888}
-.master-row{display:grid;grid-template-columns:80px 1fr 130px 80px 30px;gap:6px;
+.master-row{display:grid;grid-template-columns:80px 1fr 110px 130px 30px;gap:6px;
   margin-bottom:6px;align-items:center}
 .master-row input{padding:6px 8px;font-size:12px}
 .master-row .del{background:#c00;color:#fff;border:none;border-radius:6px;
@@ -512,15 +512,16 @@ footer{text-align:center;padding:20px;font-size:12px;color:#888;
         <button class="btn-mini" onclick="exportMasterCSV()">📤 Export CSV</button>
         <button class="btn-mini" onclick="resetMasterDefault()" style="color:#c00;border-color:#c00">↺ Reset Default</button>
       </div>
-      <div style="font-size:11px;color:#888;margin-bottom:6px;display:grid;grid-template-columns:80px 1fr 130px 80px 30px;gap:6px">
-        <div>Code ID</div><div>ชื่อสถานที่</div><div>พื้นที่</div><div>ขนาด</div><div></div>
+      <div style="font-size:11px;color:#888;margin-bottom:6px;display:grid;grid-template-columns:80px 1fr 110px 130px 30px;gap:6px">
+        <div>Code ID</div><div>ชื่อสถานที่</div><div>พื้นที่</div><div>ประเภทป้าย</div><div></div>
       </div>
       <div id="master-list"></div>
       <div class="btn-row" style="margin-top:16px">
         <button class="btn btn-primary" onclick="saveMasterFromUI()">💾 บันทึก</button>
       </div>
       <div style="font-size:11px;color:#888;margin-top:10px;padding:8px;background:#f5f7fa;border-radius:6px">
-        💡 CSV Format: <code>code_id,name,area,size</code> (1 บรรทัด/รายการ)
+        💡 CSV Format: <code>code_id,name,area,size,type</code> (1 บรรทัด/รายการ)<br>
+        ประเภท: Polewrap / Serie Poster / Gateway Billboard / Flyover 2.0 / ป้ายจราจร / ป้ายโฆษณา
       </div>
     </div>
   </div>
@@ -744,7 +745,7 @@ function doGet() {
       <table>
         <thead>
           <tr>
-            <th>#</th><th>วันที่</th><th>Code ID</th><th>Location</th>
+            <th>#</th><th>วันที่</th><th>Code ID</th><th>Location</th><th>Media Type</th>
             <th>ช่าง</th><th>PPE</th><th>Ground(Ω)</th><th>Cont.(Ω)</th>
             <th>Volt.(V)</th><th>อุปกรณ์</th><th>ปัญหา</th><th>ผล</th>
           </tr>
@@ -1169,18 +1170,33 @@ function rebuildCodeDropdown() {
   sel.innerHTML = '<option value="">-- เลือก Code ID --</option>';
   const dl = document.getElementById('code_id_list');
   if (dl) dl.innerHTML = '';
+
+  // Group by media type
+  const groups = {};
   Object.entries(MASTER_DATA).forEach(([code, info]) => {
-    const opt = document.createElement('option');
-    opt.value = code;
-    opt.textContent = `${code} — ${info.name}`;
-    sel.appendChild(opt);
-    if (dl) {
-      const dopt = document.createElement('option');
-      dopt.value = code;
-      dopt.textContent = info.name;
-      dl.appendChild(dopt);
-    }
+    const t = info.type || 'อื่นๆ';
+    if (!groups[t]) groups[t] = [];
+    groups[t].push([code, info]);
   });
+
+  Object.entries(groups).forEach(([type, items]) => {
+    const og = document.createElement('optgroup');
+    og.label = `${(MEDIA_TYPE_COLORS[type]?.icon || '📌')} ${type} (${items.length})`;
+    items.forEach(([code, info]) => {
+      const opt = document.createElement('option');
+      opt.value = code;
+      opt.textContent = `${code} — ${info.name}`;
+      og.appendChild(opt);
+      if (dl) {
+        const dopt = document.createElement('option');
+        dopt.value = code;
+        dopt.textContent = `${info.name} (${type})`;
+        dl.appendChild(dopt);
+      }
+    });
+    sel.appendChild(og);
+  });
+
   sel.value = cur;
 }
 
@@ -1293,19 +1309,23 @@ function renderMasterList() {
   const list = document.getElementById('master-list');
   list.innerHTML = '';
   Object.entries(MASTER_DATA).forEach(([code, info]) => {
-    addMasterRow(code, info.name, info.area, info.size);
+    addMasterRow(code, info.name, info.area, info.size, info.type);
   });
 }
 
-function addMasterRow(code='', name='', area='', size='') {
+function addMasterRow(code='', name='', area='', size='', type='') {
   const list = document.getElementById('master-list');
   const row = document.createElement('div');
   row.className = 'master-row';
+  const types = ['Polewrap','Serie Poster','Gateway Billboard','Flyover 2.0','ป้ายจราจร','ป้ายโฆษณา'];
+  const opts = types.map(t => `<option value="${t}" ${t===type?'selected':''}>${t}</option>`).join('');
   row.innerHTML = `
-    <input type="text" placeholder="10.1" value="${code}" class="m-code">
-    <input type="text" placeholder="ชื่อ" value="${name}" class="m-name">
+    <input type="text" placeholder="A" value="${code}" class="m-code">
+    <input type="text" placeholder="ชื่อสถานที่" value="${name}" class="m-name">
     <input type="text" placeholder="พื้นที่" value="${area}" class="m-area">
-    <input type="text" placeholder="ขนาด" value="${size}" class="m-size">
+    <select class="m-type" style="padding:6px 4px;font-size:11px;border:1px solid var(--border);border-radius:6px">
+      <option value="">-- ประเภท --</option>${opts}
+    </select>
     <button class="del" onclick="this.parentElement.remove()">×</button>`;
   list.appendChild(row);
 }
@@ -1316,12 +1336,15 @@ function saveMasterFromUI() {
     const code = row.querySelector('.m-code').value.trim();
     if (!code) return;
     const isDefault = !!DEFAULT_MASTER[code];
+    const oldEntry = MASTER_DATA[code] || {};
     newData[code] = {
       name: row.querySelector('.m-name').value.trim(),
       area: row.querySelector('.m-area').value.trim(),
-      size: row.querySelector('.m-size').value.trim(),
-      type: 'ป้ายโฆษณา',
-      __custom: !isDefault  // mark non-default entries so migration preserves them
+      type: row.querySelector('.m-type').value || 'ป้ายโฆษณา',
+      size: oldEntry.size || '',
+      lat:  oldEntry.lat,
+      lng:  oldEntry.lng,
+      __custom: !isDefault
     };
   });
   MASTER_DATA = newData;
@@ -1339,8 +1362,9 @@ function importCSV(input) {
     document.getElementById('master-list').innerHTML = '';
     lines.forEach((line, i) => {
       if (i === 0 && line.toLowerCase().includes('code')) return; // skip header
-      const [code, name, area, size] = line.split(',').map(s => (s||'').trim());
-      if (code) addMasterRow(code, name, area, size);
+      const parts = line.split(',').map(s => (s||'').trim());
+      const [code, name, area, size, type] = parts;
+      if (code) addMasterRow(code, name, area, size, type);
     });
     alert(`📥 Import ${lines.length} รายการ — กด "บันทึก" เพื่อยืนยัน`);
   };
@@ -1349,9 +1373,9 @@ function importCSV(input) {
 }
 
 function exportMasterCSV() {
-  const lines = ['code_id,name,area,size'];
+  const lines = ['code_id,name,area,size,type'];
   Object.entries(MASTER_DATA).forEach(([code, info]) => {
-    lines.push(`${code},${info.name},${info.area},${info.size||''}`);
+    lines.push(`${code},${info.name},${info.area},${info.size||''},${info.type||''}`);
   });
   const blob = new Blob(['﻿' + lines.join('\n')], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
@@ -1692,12 +1716,38 @@ function copyAppsScript() {
 }
 
 // ===================== LOCATION =====================
+const MEDIA_TYPE_COLORS = {
+  'Polewrap':         {bg:'#e3f2fd', fg:'#0d47a1', icon:'🟦'},
+  'Serie Poster':     {bg:'#f3e5f5', fg:'#4a148c', icon:'🟪'},
+  'Gateway Billboard':{bg:'#fff3e0', fg:'#e65100', icon:'🟧'},
+  'Flyover 2.0':      {bg:'#e8f5e9', fg:'#1b5e20', icon:'🟩'},
+  'ป้ายจราจร':         {bg:'#ffebee', fg:'#b71c1c', icon:'🚦'},
+  'ป้ายโฆษณา':         {bg:'#eceff1', fg:'#37474f', icon:'📺'}
+};
+function mediaTypeBadge(type) {
+  const c = MEDIA_TYPE_COLORS[type] || {bg:'#eee', fg:'#444', icon:'📌'};
+  return `<span style="background:${c.bg};color:${c.fg};padding:3px 10px;
+    border-radius:12px;font-size:12px;font-weight:700;display:inline-block;
+    white-space:nowrap">${c.icon} ${type}</span>`;
+}
+
 function checkLocation() {
   const code = getCurrentCodeId();
   const info = MASTER_DATA[code];
   const div = document.getElementById('loc-info');
   if (info) {
-    div.innerHTML = `📍 <strong>${info.name}</strong> | ${info.area} | ${info.type}`;
+    const gps = (info.lat && info.lng)
+      ? `<a href="https://www.google.com/maps?q=${info.lat},${info.lng}" target="_blank"
+          style="color:#1565c0;text-decoration:none;font-size:12px;margin-left:6px">
+          🗺️ เปิดแผนที่</a>`
+      : '';
+    div.innerHTML = `
+      <div style="display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;line-height:1.6">
+        <span>📍 <strong>${info.name}</strong></span>
+        ${mediaTypeBadge(info.type)}
+        <span style="color:#666;font-size:13px">${info.area || ''}</span>
+        ${gps}
+      </div>`;
     div.classList.add('show');
     div.style.background = '';
     div.style.color = '';
@@ -1812,6 +1862,9 @@ document.getElementById('inspection-form').addEventListener('submit', function(e
     }),
     location_name: MASTER_DATA[code_id]?.name || '—',
     location_area: MASTER_DATA[code_id]?.area || '—',
+    location_type: MASTER_DATA[code_id]?.type || '—',
+    location_lat:  MASTER_DATA[code_id]?.lat || '',
+    location_lng:  MASTER_DATA[code_id]?.lng || '',
   };
 
   const v = validateInspection(data);
@@ -1886,7 +1939,7 @@ function renderRecords() {
   document.getElementById('rec-count').textContent = records.length;
 
   if (records.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="12" style="color:#aaa;padding:20px">ยังไม่มีข้อมูล</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" style="color:#aaa;padding:20px">ยังไม่มีข้อมูล</td></tr>';
     updateSummary();
     return;
   }
@@ -1895,11 +1948,13 @@ function renderRecords() {
     const ppeOk = r.ppe.length===4;
     const eqOk  = r.equipment.length===4;
     const iss   = r.issues.length>0 ? r.issues.join(' / ') : '—';
+    const mtype = r.location_type || MASTER_DATA[r.code_id]?.type || '—';
     return `<tr>
       <td>${r.id ? records.indexOf(r)+1 : '—'}</td>
       <td style="white-space:nowrap">${r.date}</td>
       <td><strong>${r.code_id}</strong></td>
       <td style="text-align:left">${r.location_name}</td>
+      <td>${mtype !== '—' ? mediaTypeBadge(mtype) : '—'}</td>
       <td>${r.technician}</td>
       <td>${ppeOk?'✅':'❌'}</td>
       <td>${r.ground||'—'}</td>
